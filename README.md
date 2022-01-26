@@ -30,19 +30,17 @@ pip install -i https://test.pypi.org/simple/ --extra-index https://pypi.org/simp
 - To run the debugger, simply replace the call to `transpile()` method of the qiskit module with `debug()` method of your debugger instance. For an example - 
 
 ```python
-from qiskit import QuantumCircuit
 from qiskit.test.mock import FakeCasablanca
+from qiskit.circuit.random import random_circuit 
 from qiskit_trebugger import Debugger
+import warnings
 
+warnings.simplefilter('ignore')
 debugger = Debugger()
 backend = FakeCasablanca()
-circuit = QuantumCircuit(3)
-circuit.h(0)
-circuit.cx(0,1)
-circuit.cx(1,2)
-circuit.measure_all()
+circuit = random_circuit(num_qubits = 4, depth = 5 , seed = 44)
 # replace transpile call 
-debugger.debug(circuit, backend = backend)
+debugger.debug(circuit, optimization_level = 2, backend = backend, initial_layout = list(range(4)))
 ``` 
 - On calling the debug method, a new jupyter widget is displayed providing a complete summary and details of the transpilation process for circuits of < 2000 depth
 - With an easy to use and responsive interface, users can quickly see which transpiler passes ran when, how they changed the quantum circuit and what exactly changed.
