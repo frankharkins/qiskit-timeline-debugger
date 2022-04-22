@@ -75,9 +75,9 @@ debugger.debug(circuit, optimization_level = 2, backend = backend, initial_layou
 <img src = 'https://user-images.githubusercontent.com/57539040/144387552-17aa6229-c4ba-439f-9a72-3aefed52ec4f.png' height = '38%' width = '55%'>
 
 
-
-## Demo Video 
-- Please follow [this](to be added) link for a demonstration of our project.
+## Demonstration and Blog
+- Here is a [demonstration of TreBugger](https://drive.google.com/file/d/1oRstcov-OQWDpsM7Q53x7BfgFC-edtkT/view?usp=sharing) as a part of the final showcase for the Qiskit Advocate Mentorship Program, Fall 2021.
+- You can also read about some more details of our project in the [Qiskit medium blog](https://medium.com/qiskit/qiskit-trebugger-f7242066d368)
 
 ## Contributors 
 - [Aboulkhair Foda](https://github.com/EgrettaThula)
