@@ -1,4 +1,3 @@
-from collections import defaultdict
 from .pass_type import PassType
 from .property import Property
 from .transpilation_step import TranspilationStep

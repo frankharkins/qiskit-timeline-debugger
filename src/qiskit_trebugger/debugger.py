@@ -1,6 +1,6 @@
 from qiskit import QuantumCircuit, transpile, __qiskit_version__
-from qiskit.providers import BaseBackend
-from qiskit.providers.backend import Backend
+
+from qiskit.providers.backend import Backend, BackendV1, BackendV2
 from qiskit.transpiler.basepasses import AnalysisPass, TransformationPass
 
 from typing import Optional, Union
@@ -21,8 +21,8 @@ class Debugger:
     def debug(
         cls,
         circuit: QuantumCircuit,
-        backend: Optional[Union[Backend, BaseBackend]] = None,
-        optimization_level: Optional[int] = None,
+        backend: Optional[Union[Backend, BackendV1, BackendV2]] = None,
+        optimization_level: Optional[int] = 0,
         **kwargs
     ):
 
@@ -30,6 +30,11 @@ class Debugger:
             raise DebuggerError(
                 "Debugger currently supports single QuantumCircuit only!"
             )
+        if backend is None:
+            # use the simulator
+            from qiskit import Aer
+
+            backend = Aer.get_backend("qasm_simulator")
 
         # Create the view:
         view = TimelineView()

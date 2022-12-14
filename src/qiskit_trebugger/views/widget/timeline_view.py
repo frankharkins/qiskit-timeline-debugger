@@ -1,9 +1,7 @@
-from numpy import disp
 from qiskit.converters import dag_to_circuit, circuit_to_dag
 from qiskit.dagcircuit import DAGCircuit
 
 from collections import defaultdict
-from threading import Thread
 from datetime import datetime
 import html
 import ipywidgets as widgets
@@ -38,7 +36,6 @@ class TimelineView(widgets.VBox):
 
         general_info_panel = widgets.GridBox(children=[], layout={"width": "100%"})
         general_info_panel.add_class("options")
-
         # summary panel
         summary_heading = widgets.HTML(
             "<h2 style = 'margin: 10px 20px 0 30px; font-weight: bold;'> Transpilation Overview</h2>"
@@ -420,7 +417,11 @@ class TimelineView(widgets.VBox):
         step_items.append(_item)
 
         item_wpr = widgets.GridBox(
-            step_items, layout={"width": "100%", "min_height": "47px",},
+            step_items,
+            layout={
+                "width": "100%",
+                "min_height": "47px",
+            },
         )
         item_wpr.add_class("transpilation-step")
 
