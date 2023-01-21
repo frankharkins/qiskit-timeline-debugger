@@ -1,5 +1,12 @@
+"""Implements enum for the transpiler passes.
+"""
 from enum import Enum
 
+
 class PassType(Enum):
-    ANALYSIS = 'Analysis'
-    TRANSFORMATION = 'Transformation'
+    """Defines the analysis and transformation passes
+    as enums.
+    """
+
+    ANALYSIS = "Analysis"
+    TRANSFORMATION = "Transformation"

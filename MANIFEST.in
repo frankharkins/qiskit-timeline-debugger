@@ -1,1 +1,5 @@
 global-exclude *.py[cod]
+
+# Include test files
+recursive-include tests *.py 
+include tests/ipython/*.ipynb 
