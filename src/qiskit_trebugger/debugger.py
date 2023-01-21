@@ -1,13 +1,18 @@
-from qiskit import QuantumCircuit, transpile, __qiskit_version__
-
-from qiskit.providers.backend import Backend, BackendV1, BackendV2
-from qiskit.transpiler.basepasses import AnalysisPass, TransformationPass
-
+"""
+Implements the main Debugger class.
+Raises:
+    DebuggerError: if multiple quantum circuits supplied for debugging
+"""
 from typing import Optional, Union
 import logging
 import warnings
-
 from IPython.display import display
+
+
+from qiskit import QuantumCircuit, transpile, Aer, __qiskit_version__
+from qiskit.providers.backend import Backend, BackendV1, BackendV2
+from qiskit.transpiler.basepasses import AnalysisPass, TransformationPass
+
 
 from qiskit_trebugger.model import TranspilerLoggingHandler
 from qiskit_trebugger.model import TranspilerDataCollector
@@ -17,37 +22,60 @@ from .debugger_error import DebuggerError
 
 
 class Debugger:
+    """Main debugger class for thr qiskit timeline debugger.
+
+    Raises:
+        DebuggerError: if multiple quantum circuits are supplied
+    """
+
     @classmethod
     def debug(
         cls,
         circuit: QuantumCircuit,
         backend: Optional[Union[Backend, BackendV1, BackendV2]] = None,
         optimization_level: Optional[int] = 0,
-        **kwargs
+        show: Optional[bool] = True,
+        **kwargs,
     ):
+        """Calls the transpile method of qiskit with the given parameters
+           and populates the view of the widget with circuit diagram and
+           statistics.
+
+        Args:
+            circuit (QuantumCircuit): quantum circuit to debug
+            backend (Optional[Union[Backend, BackendV1, BackendV2]], optional):
+                                        Quantum Backend for execution. Defaults to None.
+            optimization_level (Optional[int], optional):
+                                        Optimization level of transpiler. Defaults to 0.
+
+        Raises:
+            DebuggerError: if multiple quantum circuits are supplied
+        """
 
         if not isinstance(circuit, QuantumCircuit):
             raise DebuggerError(
                 "Debugger currently supports single QuantumCircuit only!"
             )
         if backend is None:
-            # use the simulator
-            from qiskit import Aer
-
             backend = Aer.get_backend("qasm_simulator")
 
         # Create the view:
-        view = TimelineView()
+        cls.view = TimelineView()
 
         def on_step_callback(step):
-            view.add_step(step)
+            cls.view.add_step(step)
 
         # Prepare the model:
         transpilation_sequence = TranspilationSequence(on_step_callback)
 
+        if isinstance(backend, BackendV2):
+            backend_name = backend.name
+        else:
+            backend_name = backend.name()
+
         warnings.simplefilter("ignore")
         transpilation_sequence.general_info = {
-            "Backend": backend.name(),
+            "Backend": backend_name,
             "optimization_level": optimization_level,
             "Qiskit version": __qiskit_version__["qiskit"],
             "Terra version": __qiskit_version__["qiskit-terra"],
@@ -57,28 +85,37 @@ class Debugger:
 
         warnings.simplefilter("default")
 
-        Debugger._register_logging_handler(transpilation_sequence)
+        Debugger.register_logging_handler(transpilation_sequence)
         transpiler_callback = Debugger._get_data_collector(transpilation_sequence)
 
         # Pass the model to the view:
-        view.transpilation_sequence = transpilation_sequence
-        view.update_params(**kwargs)
+        cls.view.transpilation_sequence = transpilation_sequence
+        cls.view.update_params(**kwargs)
 
-        display(view)
+        if show:
+            display(cls.view)
 
         transpile(
             circuit,
             backend,
             optimization_level=optimization_level,
             callback=transpiler_callback,
-            **kwargs
+            **kwargs,
         )
 
-        view.update_summary()
-        view.add_class("done")
+        cls.view.update_summary()
+        cls.view.add_class("done")
 
     @classmethod
-    def _register_logging_handler(cls, transpilation_sequence):
+    def register_logging_handler(cls, transpilation_sequence):
+        """Registers logging handlers of different transpiler passes.
+
+        Args:
+            transpilation_sequence (TranspilationSequence):
+                                data structure to store the transpiler
+                                passes as a sequence of transplation
+                                steps
+        """
 
         # TODO: Do not depend on loggerDict
         all_loggers = logging.Logger.manager.loggerDict

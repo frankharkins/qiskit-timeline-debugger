@@ -1,0 +1,18 @@
+{
+    "dependencies_files": [
+        "requirements.txt"
+    ],
+    "extra_dependencies": [
+        "pytest"
+    ],
+    "language": {
+        "name": "python",
+        "versions": ["3.8"]
+    },
+    "tests_command": [
+        "pytest"
+    ],
+    "styles_check_command": [
+        "pylint -rn src tests"
+    ]
+}

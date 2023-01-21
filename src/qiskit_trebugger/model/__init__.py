@@ -1,3 +1,6 @@
+"""Sub-package to implement the model of the transpiler debugger
+"""
+
 from .pass_type import PassType
 from .property import Property
 from .circuit_stats import CircuitStats
