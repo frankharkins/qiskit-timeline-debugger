@@ -14,5 +14,10 @@
     ],
     "styles_check_command": [
         "pylint -rn src tests"
-    ]
+    ],
+    "coverages_check_command": [
+        "coverage3 run -m pytest",
+        "coverage3 report --fail-under=80"
+    ],
+    "qiskit" : true
 }
