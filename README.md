@@ -21,7 +21,7 @@ pip install qiskit-trebugger
  git clone https://github.com/TheGupta2012/qiskit-timeline-debugger.git
  ```
   - Make sure `python3` and `pip` are installed in your system
-  - Use `pip install -r requirements` to install the debugger dependencies
+  - Use `pip install -r requirements.txt` to install the debugger dependencies
   - Note : with this method, you can only use the debugger in the installed directory
 
 ## Usage Instructions
