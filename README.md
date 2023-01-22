@@ -30,7 +30,7 @@ pip install qiskit-trebugger
 - To run the debugger, simply replace the call to `transpile()` method of the qiskit module with `debug()` method of your debugger instance. For an example - 
 
 ```python
-from qiskit.test.mock import FakeCasablanca
+from qiskit.providers.fake_provider import FakeCasablanca
 from qiskit.circuit.random import random_circuit 
 from qiskit_trebugger import Debugger
 import warnings
