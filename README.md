@@ -1,5 +1,6 @@
 # Qiskit Trebugger  <img src = 'https://user-images.githubusercontent.com/57539040/144383032-6a0da7cf-d03a-4469-9be6-a3da39a2f727.png' align = "center" height = "40px" width = "40px">
 
+[![Unitary Fund](https://img.shields.io/badge/Supported%20By-UNITARY%20FUND-brightgreen.svg?style=for-the-badge)](http://unitary.fund)
 
 A new take on debuggers for quantum transpilers. 
 This repository presents a debugger for the **qiskit transpiler** in the form of a light weight jupyter widget. Built as a project for the Qiskit Advocate Mentorship Program, Fall 2021. 
