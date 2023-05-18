@@ -2,6 +2,7 @@ import curses
 import tabulate
 import qiskit
 
+from qiskit.circuit.random import random_circuit
 from curses.textpad import Textbox
 
 
@@ -33,35 +34,37 @@ transpiler_headers = [
 ]
 
 transpiler_data = [
-    ["UnRoll3qOrMore", "Transformation1", "5 ms", 9, 24, 10, 4, 6],
-    ["SetLayout", "Transformation2", "5 ms", 9, 24, 10, 4, 6],
-    ["TrivialLayout", "Analysis1", "5 ms", 9, 44, 10, 7, 6],
-    ["TrivialLayout", "Analysis2", "5 ms", 9, 44, 10, 7, 6],
-    ["TrivialLayout", "Analysis3", "5 ms", 9, 44, 10, 7, 6],
-    ["TrivialLayout", "Analysis4", "5 ms", 9, 44, 10, 7, 6],
-    ["TrivialLayout", "Analysis5", "5 ms", 9, 44, 10, 7, 6],
-    ["TrivialLayout", "Analysis6", "5 ms", 9, 44, 10, 7, 6],
-    ["TrivialLayout", "Analysis7", "5 ms", 9, 44, 10, 7, 6],
-    ["TrivialLayout", "Analysis8", "5 ms", 9, 44, 10, 7, 6],
-    ["TrivialLayout", "Analysis9", "5 ms", 9, 44, 10, 7, 6],
-    ["SetLayout", "Transformation3", "5 ms", 9, 24, 10, 4, 6],
-    ["SetLayout", "Transformation4", "5 ms", 9, 24, 10, 4, 6],
-    ["SetLayout", "Transformation5", "5 ms", 9, 24, 10, 4, 6],
-    ["SetLayout", "Transformation6", "5 ms", 9, 24, 10, 4, 6],
-    ["SetLayout", "Transformation7", "5 ms", 9, 24, 10, 4, 6],
-    ["SetLayout", "Transformation8", "5 ms", 9, 24, 10, 4, 6],
-    ["SetLayout", "Transformation9", "5 ms", 9, 24, 10, 4, 6],
-    ["SetLayout", "Transformation10", "5 ms", 9, 24, 10, 4, 6],
-    ["SetLayout", "Transformation11", "5 ms", 9, 24, 10, 4, 6],
-    ["UnRoll3qOrMore", "Transformation12", "5 ms", 9, 24, 10, 4, 6],
-    ["UnRoll3qOrMore", "Transformation13", "5 ms", 9, 24, 10, 4, 6],
-    ["UnRoll3qOrMore", "Transformation14", "5 ms", 9, 24, 10, 4, 6],
-    ["UnRoll3qOrMore", "Transformation15", "5 ms", 9, 24, 10, 4, 6],
-    ["UnRoll3qOrMore", "Transformation16", "5 ms", 9, 24, 10, 4, 6],
-    ["UnRoll3qOrMore", "Transformation17", "5 ms", 9, 24, 10, 4, 6],
-    ["UnRoll3qOrMore", "Transformation18", "5 ms", 9, 24, 10, 4, 6],
-    ["UnRoll3qOrMore", "Transformation19", "5 ms", 9, 24, 10, 4, 6],
+    ["UnRoll3qOrMore", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["SetLayout", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["TrivialLayout", "Analysis", "5 ms", 9, 44, 10, 7, 6],
+    ["TrivialLayout", "Analysis", "5 ms", 9, 44, 10, 7, 6],
+    ["TrivialLayout", "Analysis", "5 ms", 9, 44, 10, 7, 6],
+    ["TrivialLayout", "Analysis", "5 ms", 9, 44, 10, 7, 6],
+    ["TrivialLayout", "Analysis", "5 ms", 9, 44, 10, 7, 6],
+    ["TrivialLayout", "Analysis", "5 ms", 9, 44, 10, 7, 6],
+    ["TrivialLayout", "Analysis", "5 ms", 9, 44, 10, 7, 6],
+    ["TrivialLayout", "Analysis", "5 ms", 9, 44, 10, 7, 6],
+    ["TrivialLayout", "Analysis", "5 ms", 9, 44, 10, 7, 6],
+    ["SetLayout", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["SetLayout", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["SetLayout", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["SetLayout", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["SetLayout", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["SetLayout", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["SetLayout", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["SetLayout", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["SetLayout", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["UnRoll3qOrMore", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["UnRoll3qOrMore", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["UnRoll3qOrMore", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["UnRoll3qOrMore", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["UnRoll3qOrMore", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["UnRoll3qOrMore", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["UnRoll3qOrMore", "Transformation", "5 ms", 9, 24, 10, 4, 6],
+    ["UnRoll3qOrMore", "Transformation", "5 ms", 9, 24, 10, 4, 6],
 ]
+
+pass_circuits = [random_circuit(5, 5) for _ in range(len(transpiler_data))]
 
 
 PASSES_INFO = {"total_passes": len(transpiler_data), "pass_id": -1}
@@ -283,7 +286,7 @@ def get_pass_pad():
     return pass_pad
 
 
-def get_pass_deails_pad(curr_id):
+def get_pass_deails_pad(curr_id, cols):
     # 1. We'll be given an index
     # 2. Take that index, get the correct transpiler pass (transpilation step)
     # 3. Using the transpilation step, get the pass details (pass name, pass type, circuit diagram, etc.)
@@ -292,14 +295,85 @@ def get_pass_deails_pad(curr_id):
 
     # dummy for now , to check the rendering mechanisms
     # need to arrange in correct form
-    start_x = 4
-    table_width = len(pass_table[0]) + start_x
     table_height = 150  # for now
-    pass_type = transpiler_data[curr_id][1]
-
+    table_width = max(5, cols - TRANSPILER_STEPS_DIMS["PASSES_START_COL"])
     pass_pad = curses.newpad(table_height, table_width)
-    pass_pad.addstr(0, start_x, pass_type, curses.A_BOLD | curses.color_pair(1))
 
+    start_row = 0
+    curr_pass = transpiler_data[curr_id]
+
+    # build the pass name
+    pass_name = f"{curr_id}. {curr_pass[0]}"[: table_width - 1]
+    title_offset = get_center(table_width, len(pass_name))
+    pass_pad.addstr(
+        start_row, title_offset, pass_name, curses.A_BOLD | curses.color_pair(1)
+    )
+    start_row += 1
+    pass_pad.hline(start_row, 0, "_", table_width - 1)
+
+    # build the information string
+    start_row += 2
+    pass_type = curr_pass[1]
+    pass_runtime = curr_pass[2]
+    info_string = f"Type : {pass_type} | Runtime : {pass_runtime}"[: table_width - 1]
+    info_offset = get_center(table_width, len(info_string))
+    pass_pad.addstr(start_row, info_offset, info_string, curses.A_BOLD)
+
+    # build the properties string
+    start_row += 2
+    pass_depth = curr_pass[3]
+    pass_size = curr_pass[4]
+    pass_1q_gates = curr_pass[5]
+    pass_2q_gates = curr_pass[6]
+    pass_width = curr_pass[7]
+    props_string = f"Depth : {pass_depth} | Size : {pass_size} | 1Q Gates : {pass_1q_gates} | 2Q Gates : {pass_2q_gates} | Width : {pass_width}"[
+        : table_width - 1
+    ]
+    props_offset = get_center(table_width, len(props_string))
+    pass_pad.addstr(start_row, props_offset, props_string)
+
+    # build the documentation table
+    start_row += 2
+    pass_docs = [
+        ["This is a transpilation pass which does something \nto optimize something"]
+    ]
+
+    docs_table = tabulate.tabulate(
+        tabular_data=pass_docs,
+        headers=["Documentation"],
+        tablefmt="simple_grid",
+        stralign="center",
+        numalign="center",
+    ).splitlines()
+    docs_offset = get_center(table_width, len(docs_table[0]))
+    for row in range(len(docs_table)):
+        pass_pad.addstr(
+            row + start_row, docs_offset, docs_table[row][: table_width - 1]
+        )
+
+    # build the logs table
+    # to do
+    # build the property set table
+    # to do
+
+    # build the circuit table
+    start_row += len(docs_table) + 2
+
+    pass_circ = [[pass_circuits[curr_id].draw()]]
+
+    circ_table = tabulate.tabulate(
+        tabular_data=pass_circ,
+        headers=["Circuit"],
+        tablefmt="simple_grid",
+        stralign="center",
+        numalign="center",
+    ).splitlines()
+
+    circ_offset = get_center(table_width, len(circ_table[0]))
+    for row in range(len(circ_table)):
+        pass_pad.addstr(
+            row + start_row, circ_offset, circ_table[row][: table_width - 1]
+        )
     # populated pad with passes
     return pass_pad
 
@@ -425,7 +499,10 @@ def draw_menu(stdscr):
             if PASSES_INFO["pass_id"] >= 0:
                 status_type = "pass"
                 render_transpilation_pad(
-                    get_pass_deails_pad(PASSES_INFO["pass_id"]), curr_row, height, width
+                    get_pass_deails_pad(PASSES_INFO["pass_id"], width),
+                    curr_row,
+                    height,
+                    width,
                 )
         last_width = width
         last_height = height
