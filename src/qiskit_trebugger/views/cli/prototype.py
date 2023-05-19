@@ -256,14 +256,14 @@ def get_pass_title(cols):
     return pass_title
 
 
-def get_pass_pad():
+def get_pass_pad(cols):
     # first tabulate the passes then only create the pad
 
     # these tabulated passes will be a global variable
     # populated only once and same is for the pad
 
     start_x = 4
-    table_width = len(pass_table[0]) + start_x
+    table_width = max(5, cols - TRANSPILER_STEPS_DIMS["PASSES_START_COL"])
     table_height = len(pass_table) + 1
     pass_pad = curses.newpad(table_height, table_width)
 
@@ -293,8 +293,6 @@ def get_pass_deails_pad(curr_id, cols):
     # 4. Create a new pad with the pass details
     # 5. Return the pad
 
-    # dummy for now , to check the rendering mechanisms
-    # need to arrange in correct form
     table_height = 150  # for now
     table_width = max(5, cols - TRANSPILER_STEPS_DIMS["PASSES_START_COL"])
     pass_pad = curses.newpad(table_height, table_width)
@@ -302,16 +300,16 @@ def get_pass_deails_pad(curr_id, cols):
     start_row = 0
     curr_pass = transpiler_data[curr_id]
 
-    # build the pass name
+    """Build the title string"""
     pass_name = f"{curr_id}. {curr_pass[0]}"[: table_width - 1]
     title_offset = get_center(table_width, len(pass_name))
     pass_pad.addstr(
         start_row, title_offset, pass_name, curses.A_BOLD | curses.color_pair(1)
     )
     start_row += 1
-    pass_pad.hline(start_row, 0, "_", table_width - 1)
+    pass_pad.hline(start_row, 0, "_", table_width - 4)
 
-    # build the information string
+    """Build the information string """
     start_row += 2
     pass_type = curr_pass[1]
     pass_runtime = curr_pass[2]
@@ -319,7 +317,7 @@ def get_pass_deails_pad(curr_id, cols):
     info_offset = get_center(table_width, len(info_string))
     pass_pad.addstr(start_row, info_offset, info_string, curses.A_BOLD)
 
-    # build the properties string
+    """Build the properties string"""
     start_row += 2
     pass_depth = curr_pass[3]
     pass_size = curr_pass[4]
@@ -332,7 +330,7 @@ def get_pass_deails_pad(curr_id, cols):
     props_offset = get_center(table_width, len(props_string))
     pass_pad.addstr(start_row, props_offset, props_string)
 
-    # build the documentation table
+    """Build the documentation for the pass"""
     start_row += 2
     pass_docs = [
         ["This is a transpilation pass which does something \nto optimize something"]
@@ -350,15 +348,9 @@ def get_pass_deails_pad(curr_id, cols):
         pass_pad.addstr(
             row + start_row, docs_offset, docs_table[row][: table_width - 1]
         )
-
-    # build the logs table
-    # to do
-    # build the property set table
-    # to do
-
-    # build the circuit table
     start_row += len(docs_table) + 2
 
+    """Build the circuit diagram for the pass"""
     pass_circ = [[pass_circuits[curr_id].draw()]]
 
     circ_table = tabulate.tabulate(
@@ -374,7 +366,63 @@ def get_pass_deails_pad(curr_id, cols):
         pass_pad.addstr(
             row + start_row, circ_offset, circ_table[row][: table_width - 1]
         )
-    # populated pad with passes
+
+    start_row += len(circ_table) + 2
+
+    """Build the logs table for the pass"""
+    log_title_offset = get_center(table_width, len("Logs"))
+    pass_pad.addstr(
+        start_row, log_title_offset, "Logs"[: table_width - 1], curses.A_BOLD
+    )
+    start_row += 1
+
+    pass_logs = [
+        ["INFO : This is a log message"],
+        ["DEBUG : This is another log message"],
+    ]
+
+    log_table = tabulate.tabulate(
+        tabular_data=pass_logs,
+        tablefmt="simple_grid",
+        stralign="left",
+        numalign="center",
+    ).splitlines()
+
+    logs_offset = get_center(table_width, len(log_table[0]))
+    for row in range(len(log_table)):
+        pass_pad.addstr(row + start_row, logs_offset, log_table[row][: table_width - 1])
+    start_row += len(log_table) + 2
+
+    """Build the property set table for the pass"""
+    prop_set_headers = ["Name", "Value", "State"]
+    pass_prop_set = [
+        ["name1", "value1", "state1"],
+        ["name2", "value2", "state2"],
+        ["name3", "value3", "state3"],
+        ["name4", "value4", "state4"],
+        ["name5", "value5", "state5"],
+    ]
+
+    prop_set_table = tabulate.tabulate(
+        tabular_data=pass_prop_set,
+        headers=prop_set_headers,
+        tablefmt="simple_grid",
+        stralign="center",
+        numalign="center",
+    ).splitlines()
+
+    prop_title_offset = get_center(table_width, len("Property Set"))
+    pass_pad.addstr(
+        start_row, prop_title_offset, "Property Set"[: table_width - 1], curses.A_BOLD
+    )
+    props_offset = get_center(table_width, len(prop_set_table[0]))
+    start_row += 1
+    for row in range(len(prop_set_table)):
+        pass_pad.addstr(
+            row + start_row, props_offset, prop_set_table[row][: table_width - 1]
+        )
+
+    # populated pad with current pass
     return pass_pad
 
 
@@ -390,8 +438,11 @@ def render_transpilation_pad(pass_pad, curr_row, rows, cols):
     title_height = 5
     start_row = TRANSPILER_STEPS_DIMS["PASSES_START_ROW"] + title_height
 
+    # if we don't have enough rows
     if start_row >= rows - 2:
         return
+
+    # if we don't have enough columns
     if TRANSPILER_STEPS_DIMS["PASSES_START_COL"] >= cols - 1:
         return
 
@@ -432,8 +483,6 @@ def draw_menu(stdscr):
     status_window, title_window = None, None
 
     height, width = stdscr.getmaxyx()
-
-    base_passes_pad = get_pass_pad()
 
     # Loop where k is the last character pressed
     while k not in [ord("q"), ord("Q")]:
@@ -493,6 +542,7 @@ def draw_menu(stdscr):
         status_window.refresh()
 
         if status_type == "normal":
+            base_passes_pad = get_pass_pad(width)
             render_transpilation_pad(base_passes_pad, curr_row, height, width)
         elif status_type in ["index", "pass"]:
             # using zero based indexing
