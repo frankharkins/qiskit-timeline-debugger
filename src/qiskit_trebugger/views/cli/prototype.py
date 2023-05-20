@@ -256,14 +256,14 @@ def get_pass_title(cols):
     return pass_title
 
 
-def get_pass_pad(cols):
+def get_base_pass_pad():
     # first tabulate the passes then only create the pad
 
     # these tabulated passes will be a global variable
     # populated only once and same is for the pad
 
     start_x = 4
-    table_width = max(5, cols - TRANSPILER_STEPS_DIMS["PASSES_START_COL"])
+    table_width = curses.COLS - TRANSPILER_STEPS_DIMS["PASSES_START_COL"]
     table_height = len(pass_table) + 1
     pass_pad = curses.newpad(table_height, table_width)
 
@@ -286,15 +286,20 @@ def get_pass_pad(cols):
     return pass_pad
 
 
-def get_pass_deails_pad(curr_id, cols):
+def _display_header(pad, row, width, name):
+    offset = get_center(width, len(name))
+    pad.addstr(row, offset, name, curses.A_BOLD)
+
+
+def get_pass_deails_pad(curr_id):
     # 1. We'll be given an index
     # 2. Take that index, get the correct transpiler pass (transpilation step)
     # 3. Using the transpilation step, get the pass details (pass name, pass type, circuit diagram, etc.)
     # 4. Create a new pad with the pass details
     # 5. Return the pad
 
-    table_height = 150  # for now
-    table_width = max(5, cols - TRANSPILER_STEPS_DIMS["PASSES_START_COL"])
+    table_height = 350  # for now
+    table_width = curses.COLS - TRANSPILER_STEPS_DIMS["PASSES_START_COL"]
     pass_pad = curses.newpad(table_height, table_width)
 
     start_row = 0
@@ -314,8 +319,7 @@ def get_pass_deails_pad(curr_id, cols):
     pass_type = curr_pass[1]
     pass_runtime = curr_pass[2]
     info_string = f"Type : {pass_type} | Runtime : {pass_runtime}"[: table_width - 1]
-    info_offset = get_center(table_width, len(info_string))
-    pass_pad.addstr(start_row, info_offset, info_string, curses.A_BOLD)
+    _display_header(pass_pad, start_row, table_width, info_string)
 
     """Build the properties string"""
     start_row += 2
@@ -329,16 +333,21 @@ def get_pass_deails_pad(curr_id, cols):
     ]
     props_offset = get_center(table_width, len(props_string))
     pass_pad.addstr(start_row, props_offset, props_string)
+    start_row += 2
 
     """Build the documentation for the pass"""
-    start_row += 2
+    _display_header(
+        pass_pad, start_row, table_width, "Documentation"[: table_width - 1]
+    )
+
+    start_row += 1
+
     pass_docs = [
         ["This is a transpilation pass which does something \nto optimize something"]
     ]
 
     docs_table = tabulate.tabulate(
         tabular_data=pass_docs,
-        headers=["Documentation"],
         tablefmt="simple_grid",
         stralign="center",
         numalign="center",
@@ -351,11 +360,15 @@ def get_pass_deails_pad(curr_id, cols):
     start_row += len(docs_table) + 2
 
     """Build the circuit diagram for the pass"""
-    pass_circ = [[pass_circuits[curr_id].draw()]]
+    _display_header(
+        pass_pad, start_row, table_width, "Circuit Diagram"[: table_width - 1]
+    )
+    start_row += 1
+
+    pass_circ = [[pass_circuits[curr_id].draw(fold=table_width - 10)]]
 
     circ_table = tabulate.tabulate(
         tabular_data=pass_circ,
-        headers=["Circuit"],
         tablefmt="simple_grid",
         stralign="center",
         numalign="center",
@@ -363,24 +376,18 @@ def get_pass_deails_pad(curr_id, cols):
 
     circ_offset = get_center(table_width, len(circ_table[0]))
     for row in range(len(circ_table)):
-        pass_pad.addstr(
-            row + start_row, circ_offset, circ_table[row][: table_width - 1]
-        )
+        pass_pad.addstr(row + start_row, circ_offset, circ_table[row])
 
     start_row += len(circ_table) + 2
 
     """Build the logs table for the pass"""
-    log_title_offset = get_center(table_width, len("Logs"))
-    pass_pad.addstr(
-        start_row, log_title_offset, "Logs"[: table_width - 1], curses.A_BOLD
-    )
+    _display_header(pass_pad, start_row, table_width, "Logs"[: table_width - 1])
     start_row += 1
 
     pass_logs = [
         ["INFO : This is a log message"],
         ["DEBUG : This is another log message"],
     ]
-
     log_table = tabulate.tabulate(
         tabular_data=pass_logs,
         tablefmt="simple_grid",
@@ -394,6 +401,9 @@ def get_pass_deails_pad(curr_id, cols):
     start_row += len(log_table) + 2
 
     """Build the property set table for the pass"""
+    _display_header(pass_pad, start_row, table_width, "Property Set"[: table_width - 1])
+    start_row += 1
+
     prop_set_headers = ["Name", "Value", "State"]
     pass_prop_set = [
         ["name1", "value1", "state1"],
@@ -411,12 +421,7 @@ def get_pass_deails_pad(curr_id, cols):
         numalign="center",
     ).splitlines()
 
-    prop_title_offset = get_center(table_width, len("Property Set"))
-    pass_pad.addstr(
-        start_row, prop_title_offset, "Property Set"[: table_width - 1], curses.A_BOLD
-    )
     props_offset = get_center(table_width, len(prop_set_table[0]))
-    start_row += 1
     for row in range(len(prop_set_table)):
         pass_pad.addstr(
             row + start_row, props_offset, prop_set_table[row][: table_width - 1]
@@ -426,7 +431,7 @@ def get_pass_deails_pad(curr_id, cols):
     return pass_pad
 
 
-def render_transpilation_pad(pass_pad, curr_row, rows, cols):
+def render_transpilation_pad(pass_pad, curr_row, curr_col, rows, cols):
     """Function to render the pass pad.
 
     NOTE : this is agnostic of whether we are passing the base pad
@@ -448,12 +453,24 @@ def render_transpilation_pad(pass_pad, curr_row, rows, cols):
 
     pass_pad.refresh(
         curr_row,
-        0,
+        curr_col,
         start_row,
         TRANSPILER_STEPS_DIMS["PASSES_START_COL"],
         rows - 2,
         cols - 1,
     )
+
+
+def refresh_base_windows(width):
+    title_window = get_title(width)
+    title_window.refresh()
+
+    info_window = get_overview(width)
+    info_window.refresh()
+
+    pass_title_window = get_pass_title(width)
+    if pass_title_window:
+        pass_title_window.refresh()
 
 
 def draw_menu(stdscr):
@@ -478,11 +495,15 @@ def draw_menu(stdscr):
     curses.curs_set(0)
 
     curr_row = 0
+    curr_col = 0
     last_width, last_height = 0, 0
     status_type = "normal"
-    status_window, title_window = None, None
 
     height, width = stdscr.getmaxyx()
+    refresh_base_windows(width)
+
+    base_passes_pad = get_base_pass_pad()
+    pass_details_pads = [get_pass_deails_pad(i) for i in range(len(transpiler_data))]
 
     # Loop where k is the last character pressed
     while k not in [ord("q"), ord("Q")]:
@@ -496,9 +517,33 @@ def draw_menu(stdscr):
         if k == curses.KEY_UP:
             curr_row -= 1
             curr_row = max(curr_row, 0)
+        elif k == curses.KEY_LEFT:
+            curr_col -= 1
+            curr_col = max(curr_col, 0)
+
+        # different cases to handle as different views are
+        # present in the debugger
         elif k == curses.KEY_DOWN:
             curr_row += 1
-            curr_row = min(curr_row, len(pass_table) - 1)
+            if status_type == "normal":
+                curr_row = min(curr_row, len(pass_table) - 1)
+            elif status_type in ["index", "pass"]:
+                curr_row = min(
+                    # as we have 350 rows by default
+                    curr_row,
+                    349,
+                )
+
+        elif k == curses.KEY_RIGHT:
+            curr_col += 1
+
+            if status_type == "normal":
+                curr_col = min(curr_col, len(pass_table[1]) - 1)
+            elif status_type in ["index", "pass"]:
+                curr_col = min(
+                    curr_col,
+                    curses.COLS - TRANSPILER_STEPS_DIMS["PASSES_START_COL"] - 1,
+                )
         elif k in [ord("i"), ord("I")]:
             # user wants to index into the pass
             status_type = "index"
@@ -519,6 +564,8 @@ def draw_menu(stdscr):
             # reset the state variables
             status_type = "normal"
             PASSES_INFO["pass_id"] = -1
+            curr_col = 0
+            curr_row = 0
 
         # Rendering some text
         whstr = "Width: {}, Height: {}".format(width, height)
@@ -528,29 +575,21 @@ def draw_menu(stdscr):
         stdscr.refresh()
 
         if width != last_width or height != last_height:
-            title_window = get_title(width)
-            title_window.refresh()
-
-            info_window = get_overview(width)
-            info_window.refresh()
-
-            pass_title_window = get_pass_title(width)
-            if pass_title_window:
-                pass_title_window.refresh()
+            refresh_base_windows(width)
 
         status_window = get_statusbar(height, width, status_type)
         status_window.refresh()
 
         if status_type == "normal":
-            base_passes_pad = get_pass_pad(width)
-            render_transpilation_pad(base_passes_pad, curr_row, height, width)
+            render_transpilation_pad(base_passes_pad, curr_row, curr_col, height, width)
         elif status_type in ["index", "pass"]:
             # using zero based indexing
             if PASSES_INFO["pass_id"] >= 0:
                 status_type = "pass"
                 render_transpilation_pad(
-                    get_pass_deails_pad(PASSES_INFO["pass_id"], width),
+                    pass_details_pads[PASSES_INFO["pass_id"]],
                     curr_row,
+                    curr_col,
                     height,
                     width,
                 )
