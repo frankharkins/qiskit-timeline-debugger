@@ -263,7 +263,7 @@ def get_base_pass_pad():
     # populated only once and same is for the pad
 
     start_x = 4
-    table_width = curses.COLS - TRANSPILER_STEPS_DIMS["PASSES_START_COL"]
+    table_width = 250  # for now
     table_height = len(pass_table) + 1
     pass_pad = curses.newpad(table_height, table_width)
 
@@ -299,7 +299,7 @@ def get_pass_deails_pad(curr_id):
     # 5. Return the pad
 
     table_height = 350  # for now
-    table_width = curses.COLS - TRANSPILER_STEPS_DIMS["PASSES_START_COL"]
+    table_width = max(curses.COLS - TRANSPILER_STEPS_DIMS["PASSES_START_COL"], 127)
     pass_pad = curses.newpad(table_height, table_width)
 
     start_row = 0
@@ -387,6 +387,8 @@ def get_pass_deails_pad(curr_id):
     pass_logs = [
         ["INFO : This is a log message"],
         ["DEBUG : This is another log message"],
+        ["WARNING : This is a warning message"],
+        ["ERROR : This is an error message"],
     ]
     log_table = tabulate.tabulate(
         tabular_data=pass_logs,
