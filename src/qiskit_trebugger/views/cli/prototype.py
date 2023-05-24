@@ -465,145 +465,155 @@ def render_transpilation_pad(pass_pad, curr_row, curr_col, rows, cols):
 
 def refresh_base_windows(width):
     title_window = get_title(width)
-    title_window.refresh()
+    title_window.noutrefresh()
 
     info_window = get_overview(width)
-    info_window.refresh()
+    info_window.noutrefresh()
 
     pass_title_window = get_pass_title(width)
     if pass_title_window:
-        pass_title_window.refresh()
+        pass_title_window.noutrefresh()
 
 
-def draw_menu(stdscr):
-    k = 0
+class CLIView:
+    def __init__(self):
+        pass
 
-    # Clear and refresh the screen for a blank canvas
-    stdscr.clear()
-    stdscr.refresh()
+    def draw_menu(self, stdscr):
+        k = 0
 
-    # Start colors in curses
-    curses.start_color()
-    curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
-    curses.init_pair(2, curses.COLOR_MAGENTA, curses.COLOR_WHITE)
-    curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_CYAN)
-    curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK)
-    curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
-    curses.init_pair(6, curses.COLOR_GREEN, curses.COLOR_BLACK)
-
-    stdscr.bkgd(curses.color_pair(4))
-
-    # to hide the cursor
-    curses.curs_set(0)
-
-    curr_row = 0
-    curr_col = 0
-    last_width, last_height = 0, 0
-    status_type = "normal"
-
-    height, width = stdscr.getmaxyx()
-    refresh_base_windows(width)
-
-    base_passes_pad = get_base_pass_pad()
-    pass_details_pads = [get_pass_deails_pad(i) for i in range(len(transpiler_data))]
-
-    # Loop where k is the last character pressed
-    while k not in [ord("q"), ord("Q")]:
-        # Initialization
-        height, width = stdscr.getmaxyx()
-        # nice, clear out the terminal if changed the height and then re-render
-        if last_height + last_width > 0 and (
-            last_width != width or last_height != height
-        ):
-            stdscr.clear()
-        if k == curses.KEY_UP:
-            curr_row -= 1
-            curr_row = max(curr_row, 0)
-        elif k == curses.KEY_LEFT:
-            curr_col -= 1
-            curr_col = max(curr_col, 0)
-
-        # different cases to handle as different views are
-        # present in the debugger
-        elif k == curses.KEY_DOWN:
-            curr_row += 1
-            if status_type == "normal":
-                curr_row = min(curr_row, len(pass_table) - 1)
-            elif status_type in ["index", "pass"]:
-                curr_row = min(
-                    # as we have 350 rows by default
-                    curr_row,
-                    349,
-                )
-
-        elif k == curses.KEY_RIGHT:
-            curr_col += 1
-
-            if status_type == "normal":
-                curr_col = min(curr_col, len(pass_table[1]) - 1)
-            elif status_type in ["index", "pass"]:
-                curr_col = min(
-                    curr_col,
-                    curses.COLS - TRANSPILER_STEPS_DIMS["PASSES_START_COL"] - 1,
-                )
-        elif k in [ord("i"), ord("I")]:
-            # user wants to index into the pass
-            status_type = "index"
-
-        elif k in [ord("n"), ord("N")]:
-            if status_type in ["index", "pass"]:
-                PASSES_INFO["pass_id"] = min(
-                    PASSES_INFO["pass_id"] + 1, PASSES_INFO["total_passes"] - 1
-                )
-                status_type = "pass"
-
-        elif k in [ord("p"), ord("P")]:
-            if status_type in ["index", "pass"]:
-                PASSES_INFO["pass_id"] = max(0, PASSES_INFO["pass_id"] - 1)
-                status_type = "pass"
-
-        elif k in [ord("b"), ord("B")]:
-            # reset the state variables
-            status_type = "normal"
-            PASSES_INFO["pass_id"] = -1
-            curr_col = 0
-            curr_row = 0
-
-        # Rendering some text
-        whstr = "Width: {}, Height: {}".format(width, height)
-        stdscr.addstr(0, 0, whstr, curses.color_pair(1))
-
-        # Refresh the screen
+        # Clear and refresh the screen for a blank canvas
+        stdscr.clear()
         stdscr.refresh()
 
-        if width != last_width or height != last_height:
-            refresh_base_windows(width)
+        # Start colors in curses
+        curses.start_color()
+        curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
+        curses.init_pair(2, curses.COLOR_MAGENTA, curses.COLOR_WHITE)
+        curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_CYAN)
+        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK)
+        curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+        curses.init_pair(6, curses.COLOR_GREEN, curses.COLOR_BLACK)
 
-        status_window = get_statusbar(height, width, status_type)
-        status_window.refresh()
+        stdscr.bkgd(curses.color_pair(4))
 
-        if status_type == "normal":
-            render_transpilation_pad(base_passes_pad, curr_row, curr_col, height, width)
-        elif status_type in ["index", "pass"]:
-            # using zero based indexing
-            if PASSES_INFO["pass_id"] >= 0:
-                status_type = "pass"
+        # to hide the cursor
+        curses.curs_set(0)
+
+        curr_row = 0
+        curr_col = 0
+        last_width, last_height = 0, 0
+        status_type = "normal"
+
+        height, width = stdscr.getmaxyx()
+        refresh_base_windows(width)
+
+        base_passes_pad = get_base_pass_pad()
+        pass_details_pads = [
+            get_pass_deails_pad(i) for i in range(len(transpiler_data))
+        ]
+
+        # Loop where k is the last character pressed
+        while k not in [ord("q"), ord("Q")]:
+            # Initialization
+            height, width = stdscr.getmaxyx()
+            # nice, clear out the terminal if changed the height and then re-render
+            if last_height + last_width > 0 and (
+                last_width != width or last_height != height
+            ):
+                stdscr.clear()
+            if k == curses.KEY_UP:
+                curr_row -= 1
+                curr_row = max(curr_row, 0)
+            elif k == curses.KEY_LEFT:
+                curr_col -= 1
+                curr_col = max(curr_col, 0)
+
+            # different cases to handle as different views are
+            # present in the debugger
+            elif k == curses.KEY_DOWN:
+                curr_row += 1
+                if status_type == "normal":
+                    curr_row = min(curr_row, len(pass_table) - 1)
+                elif status_type in ["index", "pass"]:
+                    curr_row = min(
+                        # as we have 350 rows by default
+                        curr_row,
+                        349,
+                    )
+
+            elif k == curses.KEY_RIGHT:
+                curr_col += 1
+
+                if status_type == "normal":
+                    curr_col = min(curr_col, len(pass_table[1]) - 1)
+                elif status_type in ["index", "pass"]:
+                    curr_col = min(
+                        curr_col,
+                        curses.COLS - TRANSPILER_STEPS_DIMS["PASSES_START_COL"] - 1,
+                    )
+            elif k in [ord("i"), ord("I")]:
+                # user wants to index into the pass
+                status_type = "index"
+
+            elif k in [ord("n"), ord("N")]:
+                if status_type in ["index", "pass"]:
+                    PASSES_INFO["pass_id"] = min(
+                        PASSES_INFO["pass_id"] + 1, PASSES_INFO["total_passes"] - 1
+                    )
+                    status_type = "pass"
+
+            elif k in [ord("p"), ord("P")]:
+                if status_type in ["index", "pass"]:
+                    PASSES_INFO["pass_id"] = max(0, PASSES_INFO["pass_id"] - 1)
+                    status_type = "pass"
+
+            elif k in [ord("b"), ord("B")]:
+                # reset the state variables
+                status_type = "normal"
+                PASSES_INFO["pass_id"] = -1
+                curr_col = 0
+                curr_row = 0
+
+            # Rendering some text
+            whstr = "Width: {}, Height: {}".format(width, height)
+            stdscr.addstr(0, 0, whstr, curses.color_pair(1))
+
+            # Refresh the screen
+            stdscr.refresh()
+
+            if width != last_width or height != last_height:
+                refresh_base_windows(width)
+
+            status_window = get_statusbar(height, width, status_type)
+            status_window.noutrefresh()
+
+            curses.doupdate()
+            if status_type == "normal":
                 render_transpilation_pad(
-                    pass_details_pads[PASSES_INFO["pass_id"]],
-                    curr_row,
-                    curr_col,
-                    height,
-                    width,
+                    base_passes_pad, curr_row, curr_col, height, width
                 )
-        last_width = width
-        last_height = height
+            elif status_type in ["index", "pass"]:
+                # using zero based indexing
+                if PASSES_INFO["pass_id"] >= 0:
+                    status_type = "pass"
+                    render_transpilation_pad(
+                        pass_details_pads[PASSES_INFO["pass_id"]],
+                        curr_row,
+                        curr_col,
+                        height,
+                        width,
+                    )
+            last_width = width
+            last_height = height
 
-        # Wait for next input
-        k = stdscr.getch()
+            # Wait for next input
+            k = stdscr.getch()
 
 
 def main():
-    curses.wrapper(draw_menu)
+    view = CLIView()
+    curses.wrapper(view.draw_menu)
 
 
 if __name__ == "__main__":

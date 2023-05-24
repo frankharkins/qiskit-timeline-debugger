@@ -177,7 +177,6 @@ class TimelineView(widgets.VBox):
         self.panels["summary"].children[1].children = self._get_summary_panel()
 
     def _get_summary_panel(self):
-
         # get the total count of passes
         total_passes = {"T": 0, "A": 0}
 
@@ -439,7 +438,6 @@ class TimelineView(widgets.VBox):
             btn.icon = "caret-down"
 
         if len(details_panel.children) == 0:
-
             # First time to expand this panel
             tab_titles = ["Circuit", "Property Set", "Logs", "Help"]
             children = [
@@ -724,7 +722,6 @@ class TimelineView(widgets.VBox):
             img_wpr.append_display_data(HTML(img_html))
 
     def on_property(self, btn):
-
         warnings.filterwarnings(
             "ignore",
             message="Back-references to from Bit instances to \

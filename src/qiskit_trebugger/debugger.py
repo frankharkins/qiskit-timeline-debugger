@@ -3,6 +3,7 @@ Implements the main Debugger class.
 Raises:
     DebuggerError: if multiple quantum circuits supplied for debugging
 """
+import curses
 from typing import Optional, Union
 import logging
 import warnings
@@ -18,6 +19,8 @@ from qiskit_trebugger.model import TranspilerLoggingHandler
 from qiskit_trebugger.model import TranspilerDataCollector
 from qiskit_trebugger.model import TranspilationSequence
 from qiskit_trebugger.views.widget.timeline_view import TimelineView
+from qiskit_trebugger.views.cli.cli_view import CLIView
+
 from .debugger_error import DebuggerError
 
 
@@ -34,6 +37,7 @@ class Debugger:
         circuit: QuantumCircuit,
         backend: Optional[Union[Backend, BackendV1, BackendV2]] = None,
         optimization_level: Optional[int] = 0,
+        view_type: Optional[str] = "cli",
         show: Optional[bool] = True,
         **kwargs,
     ):
@@ -60,7 +64,10 @@ class Debugger:
             backend = Aer.get_backend("qasm_simulator")
 
         # Create the view:
-        cls.view = TimelineView()
+        if view_type == "cli":
+            cls.view = CLIView()
+        else:
+            cls.view = TimelineView()
 
         def on_step_callback(step):
             cls.view.add_step(step)
@@ -74,11 +81,12 @@ class Debugger:
             backend_name = backend.name()
 
         warnings.simplefilter("ignore")
+
         transpilation_sequence.general_info = {
-            "Backend": backend_name,
+            "backend": backend_name,
             "optimization_level": optimization_level,
-            "Qiskit version": __qiskit_version__["qiskit"],
-            "Terra version": __qiskit_version__["qiskit-terra"],
+            "qiskit version": __qiskit_version__["qiskit"],
+            "terra version": __qiskit_version__["qiskit-terra"],
         }
 
         transpilation_sequence.original_circuit = circuit
@@ -90,10 +98,11 @@ class Debugger:
 
         # Pass the model to the view:
         cls.view.transpilation_sequence = transpilation_sequence
-        cls.view.update_params(**kwargs)
 
-        if show:
-            display(cls.view)
+        if view_type == "timeline":
+            cls.view.update_params(**kwargs)
+            if show:
+                display(cls.view)
 
         transpile(
             circuit,
@@ -103,8 +112,11 @@ class Debugger:
             **kwargs,
         )
 
-        cls.view.update_summary()
-        cls.view.add_class("done")
+        if view_type == "timeline":
+            cls.view.update_summary()
+            cls.view.add_class("done")
+        else:
+            curses.wrapper(cls.view.display)
 
     @classmethod
     def register_logging_handler(cls, transpilation_sequence):

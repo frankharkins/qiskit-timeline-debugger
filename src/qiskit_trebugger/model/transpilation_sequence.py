@@ -11,6 +11,7 @@ class TranspilationSequence:
 
         self.on_step_callback = on_step_callback
         self.steps = []
+        self.total_runtime = 0
         self._collected_logs = {}
 
     @property
@@ -43,6 +44,7 @@ class TranspilationSequence:
 
         step.index = len(self.steps)
         self.steps.append(step)
+        self.total_runtime += round(step.duration, 2)
 
         # property set index:
         idx = step.index
