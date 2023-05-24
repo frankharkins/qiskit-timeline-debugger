@@ -3,6 +3,7 @@ import tabulate
 from curses.textpad import Textbox
 
 from ...model.pass_type import PassType
+from .cli_pass_pad import TranspilerPassPad
 
 
 class CLIView:
@@ -10,8 +11,24 @@ class CLIView:
         # define different components
         self._title = None
         self._overview = None
+
+        self._all_passes_data = []
+        self._all_passes_table = None
+        self._pass_table_headers = [
+            "Pass Name",
+            "Pass Type",
+            "Runtime",
+            "Depth",
+            "Size",
+            "1q Gates",
+            "2q Gates",
+            "Width",
+        ]
+        # add the whitespace option
+        tabulate.PRESERVE_WHITESPACE = True
+
         self._all_passes_pad = None
-        self._individual_pad_list = None
+        self._pass_pad_list = []
         self._status_bar = None
         self._title_string = "Qiskit Transpiler Debugger"
 
@@ -65,29 +82,32 @@ class CLIView:
 
         # to do
 
-        # elif key == curses.KEY_DOWN:
-        #     self._view_params["curr_row"] += 1
-        #     if self._view_params["status_type"] == "normal":
-        #         self._view_params["curr_row"] = min(
-        #             self._view_params["curr_row"], len(self._pass_table) - 1
-        #         )
-        #     elif self._view_params["status_type"] in ["index", "pass"]:
-        #         self._view_params["curr_row"] = min(
-        #             # as we have 350 rows by default
-        #             self._view_params["curr_row"],
-        #             349,
-        #         )
+        elif key == curses.KEY_DOWN:
+            self._view_params["curr_row"] += 1
+            if self._view_params["status_type"] == "normal":
+                self._view_params["curr_row"] = min(
+                    self._view_params["curr_row"], len(self._all_passes_table) - 1
+                )
+            elif self._view_params["status_type"] in ["index", "pass"]:
+                self._view_params["curr_row"] = min(
+                    # as we have 350 rows by default
+                    self._view_params["curr_row"],
+                    349,
+                )
 
-        # elif key == curses.KEY_RIGHT:
-        #     curr_col += 1
+        elif key == curses.KEY_RIGHT:
+            self._view_params["curr_col"] += 1
 
-        #     if status_type == "normal":
-        #         curr_col = min(curr_col, len(pass_table[1]) - 1)
-        #     elif status_type in ["index", "pass"]:
-        #         curr_col = min(
-        #             curr_col,
-        #             curses.COLS - TRANSPILER_STEPS_DIMS["PASSES_START_COL"] - 1,
-        #         )
+            if self._view_params["status_type"] == "normal":
+                self._view_params["curr_col"] = min(
+                    self._view_params["curr_col"], len(self._all_passes_table[1]) - 1
+                )
+
+            elif self._view_params["status_type"] in ["index", "pass"]:
+                self._view_params["curr_col"] = min(
+                    self._view_params["curr_col"],
+                    curses.COLS - self._view_params["transpiler_start_col"] - 1,
+                )
         elif key in [ord("i"), ord("I")]:
             # user wants to index into the pass
             self._view_params["status_type"] = "index"
@@ -293,18 +313,18 @@ class CLIView:
                                          different view states of the debugger.
                                          Defaults to "normal".
 
+            STATUS STATES
+                -normal        : normal status bar
+                -index         : index status bar - user is entering the numbers (requires input to be shown to user)
+                -invalid       : error status bar - user has entered an invalid character
+                -out_of_bounds : out of bounds status bar - user has entered a number out of bounds
+                -pass          : pass status bar - user has entered a valid number and is now viewing the pass details
+
+                NOTE : processing is done after the user presses enter.
+                This will only return a status bar window, TEXT processing is done within this function ONLY
         Returns:
             curses.window : Statusbar window object
         """
-        # normal        : normal status bar
-        # index         : index status bar - user is entering the numbers (requires input to be shown to user)
-        # invalid       : error status bar - user has entered an invalid character
-        # out_of_bounds : out of bounds status bar - user has entered a number out of bounds
-        # pass          : pass status bar - user has entered a valid number and is now viewing the pass details
-
-        # NOTE : processing is done after the user presses enter.
-
-        # This will only return a status bar window, TEXT processing is done within this function ONLY
 
         status_str = self._status_strings[status_type][: cols - 1]
 
@@ -371,11 +391,98 @@ class CLIView:
             height, width, self._view_params["status_type"]
         )
         self._status_bar.noutrefresh()
-        curses.doupdate()
+
+    def _build_pass_pad_list(self):
+        for step in self.transpilation_sequence.steps:
+            table_height = 350  # for now
+            table_width = 128
+            pad = curses.newpad(table_height, table_width)
+            pass_pad = TranspilerPassPad(step, table_height, table_width, pad)
+            pass_pad.build_pad()
+            self._pass_pad_list.append(pass_pad.pad)
 
     def add_step(self, step):
-        # build the pass pad list step by step!! :)
-        pass
+        self._all_passes_data.append(
+            [
+                step.name,
+                step.pass_type.value,
+                step.duration,
+                step.circuit_stats.depth,
+                step.circuit_stats.size,
+                step.circuit_stats.ops_1q,
+                step.circuit_stats.ops_2q,
+                step.circuit_stats.width,
+            ]
+        )
+
+    def _get_all_passes_table(self):
+        # build from the transpilation sequence
+        # make table
+        pass_table = tabulate.tabulate(
+            headers=self._pass_table_headers,
+            tabular_data=self._all_passes_data,
+            tablefmt="simple_grid",
+            stralign="center",
+            numalign="center",
+            showindex="always",
+        ).splitlines()
+
+        return pass_table
+
+    def _get_all_passes_pad(self):
+        start_x = 4
+        table_width = 250  # for now
+        table_height = len(self._all_passes_table) + 1
+        pass_pad = curses.newpad(table_height, table_width)
+
+        for row in range(3):
+            pass_pad.addstr(
+                row,
+                start_x,
+                self._all_passes_table[row][: table_width - 1],
+                curses.A_BOLD | curses.color_pair(1),
+            )
+
+        # now start adding the passes
+        for row in range(3, len(self._all_passes_table)):
+            pass_pad.addstr(
+                row, start_x, self._all_passes_table[row][: table_width - 1]
+            )
+
+        # populated pad with passes
+        return pass_pad
+
+    def _render_transpilation_pad(self, pass_pad, curr_row, curr_col, rows, cols):
+        """Function to render the pass pad.
+
+        NOTE : this is agnostic of whether we are passing the base pad
+            or the individual transpiler pass pad. Why?
+
+            Because we are not shifting the pad, we are just refreshing it.
+        """
+        if not pass_pad:
+            return
+
+        # 4 rows for the title + curr_row (curr_row is the row of the pass)
+        title_height = 5
+        start_row = self._view_params["transpiler_start_row"] + title_height
+
+        # if we don't have enough rows
+        if start_row >= rows - 2:
+            return
+
+        # if we don't have enough columns
+        if self._view_params["transpiler_start_col"] >= cols - 1:
+            return
+
+        pass_pad.noutrefresh(
+            curr_row,
+            curr_col,
+            start_row,
+            self._view_params["transpiler_start_col"],
+            rows - 2,
+            cols - 1,
+        )
 
     def display(self, stdscr):
         key = 0
@@ -397,10 +504,13 @@ class CLIView:
         self._refresh_base_windows(True, height, width)
 
         # build the base transpiler pad using the transpilation sequence
-        # to do
+        self._all_passes_table = self._get_all_passes_table()
+        self._all_passes_pad = self._get_all_passes_pad()
+        self._build_pass_pad_list()
 
         # build the individual pass pad list
-        # to do
+        # done, via add_step
+        assert len(self._pass_pad_list) > 0
 
         while key not in [ord("q"), ord("Q")]:
             # Initialization
@@ -429,10 +539,27 @@ class CLIView:
 
             self._refresh_base_windows(panel_resized, height, width)
 
+            pad_to_render = None
+            if self._view_params["status_type"] == "normal":
+                pad_to_render = self._all_passes_pad
+            elif self._view_params["status_type"] in ["index", "pass"]:
+                # using zero based indexing
+                pass_id = self._view_params["pass_id"]
+                if pass_id >= 0:
+                    self._view_params["status_type"] = "pass"
+                    pad_to_render = self._pass_pad_list[pass_id]
+
+            self._render_transpilation_pad(
+                pad_to_render,
+                self._view_params["curr_row"],
+                self._view_params["curr_col"],
+                height,
+                width,
+            )
+
             self._view_params["last_width"] = width
             self._view_params["last_height"] = height
-
-            # to do : add the pass rendering
+            curses.doupdate()
 
             # wait for the next input
             key = stdscr.getch()
