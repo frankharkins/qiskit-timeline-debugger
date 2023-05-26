@@ -333,9 +333,9 @@ def get_pass_deails_pad(curr_id):
     ]
     props_offset = get_center(table_width, len(props_string))
     pass_pad.addstr(start_row, props_offset, props_string)
-    start_row += 2
 
     """Build the documentation for the pass"""
+    start_row += 2
     _display_header(
         pass_pad, start_row, table_width, "Documentation"[: table_width - 1]
     )

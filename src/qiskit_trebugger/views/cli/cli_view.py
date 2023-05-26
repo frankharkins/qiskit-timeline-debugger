@@ -1,6 +1,9 @@
 import curses
 import tabulate
 from curses.textpad import Textbox
+from qiskit.dagcircuit import DAGCircuit
+from qiskit.converters import dag_to_circuit
+
 
 from ...model.pass_type import PassType
 from .cli_pass_pad import TranspilerPassPad
@@ -28,7 +31,7 @@ class CLIView:
         tabulate.PRESERVE_WHITESPACE = True
 
         self._all_passes_pad = None
-        self._pass_pad_list = []
+        self._pass_pad_list = None
         self._status_bar = None
         self._title_string = "Qiskit Transpiler Debugger"
 
@@ -52,6 +55,8 @@ class CLIView:
             "last_width": 0,
             "last_height": 0,
             "pass_id": -1,
+            "transpiler_pad_width": 128,
+            "transpiler_pad_height": 2000,
             "transpiler_start_row": 6,
             "transpiler_start_col": None,
             "status_type": "normal",
@@ -92,7 +97,7 @@ class CLIView:
                 self._view_params["curr_row"] = min(
                     # as we have 350 rows by default
                     self._view_params["curr_row"],
-                    349,
+                    1999,
                 )
 
         elif key == curses.KEY_RIGHT:
@@ -392,14 +397,44 @@ class CLIView:
         )
         self._status_bar.noutrefresh()
 
-    def _build_pass_pad_list(self):
-        for step in self.transpilation_sequence.steps:
-            table_height = 350  # for now
-            table_width = 128
-            pad = curses.newpad(table_height, table_width)
-            pass_pad = TranspilerPassPad(step, table_height, table_width, pad)
-            pass_pad.build_pad()
-            self._pass_pad_list.append(pass_pad.pad)
+    def _get_pass_circuit(self, step):
+        if step.pass_type == PassType.TRANSFORMATION:
+            return dag_to_circuit(step.dag)
+        idx = step.index
+        # Due to a bug in DAGCircuit.__eq__, we can not use ``step.dag != None``
+
+        found_transform = False
+        while (
+            not isinstance(self.transpilation_sequence.steps[idx].dag, DAGCircuit)
+            and idx > 0
+        ):
+            idx = idx - 1
+            if idx >= 0:
+                found_transform = (
+                    self.transpilation_sequence.steps[idx].pass_type
+                    == PassType.TRANSFORMATION
+                )
+
+        if found_transform is False:
+            return self.transpilation_sequence.original_circuit
+
+        return dag_to_circuit(self.transpilation_sequence.steps[idx].dag)
+
+    def _build_pass_pad(self, index):
+        step = self.transpilation_sequence.steps[index]
+        pad = curses.newpad(
+            self._view_params["transpiler_pad_height"],
+            self._view_params["transpiler_pad_width"],
+        )
+        pass_pad = TranspilerPassPad(
+            step,
+            self._get_pass_circuit(step),
+            self._view_params["transpiler_pad_height"],
+            self._view_params["transpiler_pad_width"],
+            pad,
+        )
+        pass_pad.build_pad()
+        self._pass_pad_list[index] = pass_pad.pad
 
     def add_step(self, step):
         self._all_passes_data.append(
@@ -506,7 +541,7 @@ class CLIView:
         # build the base transpiler pad using the transpilation sequence
         self._all_passes_table = self._get_all_passes_table()
         self._all_passes_pad = self._get_all_passes_pad()
-        self._build_pass_pad_list()
+        self._pass_pad_list = [None] * len(self.transpilation_sequence.steps)
 
         # build the individual pass pad list
         # done, via add_step
@@ -547,6 +582,8 @@ class CLIView:
                 pass_id = self._view_params["pass_id"]
                 if pass_id >= 0:
                     self._view_params["status_type"] = "pass"
+                    if self._pass_pad_list[pass_id] is None:
+                        self._build_pass_pad(pass_id)
                     pad_to_render = self._pass_pad_list[pass_id]
 
             self._render_transpilation_pad(
