@@ -1,10 +1,7 @@
 import curses
 import tabulate
 from datetime import datetime
-from qiskit.converters import dag_to_circuit
 from collections import defaultdict
-
-from ...model.pass_type import PassType
 
 
 class TranspilerPassPad:
