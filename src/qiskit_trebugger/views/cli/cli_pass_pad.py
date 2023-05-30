@@ -8,9 +8,10 @@ from ...model.pass_type import PassType
 
 
 class TranspilerPassPad:
-    def __init__(self, step, circuit, height, width, pad_obj):
+    def __init__(self, step, circuit, property_set, height, width, pad_obj):
         self.transpiler_pass = step
         self.circuit = circuit
+        self.property_set = property_set
         self.height = height
         self.width = width
         self.pad = pad_obj
@@ -62,8 +63,11 @@ class TranspilerPassPad:
         self._start_row += 2
         self._display_header("Documentation"[: self.width - 1])
         self._start_row += 1
+        pass_docs = self.transpiler_pass.get_docs()
 
-        pass_docs = [[self.transpiler_pass.get_docs()]]
+        if pass_docs.count("\n") > 0:
+            pass_docs = "    " + pass_docs
+        pass_docs = [[pass_docs], [self.transpiler_pass.run_method_docs]]
 
         docs_table = tabulate.tabulate(
             tabular_data=pass_docs,
@@ -74,9 +78,6 @@ class TranspilerPassPad:
         docs_offset = self._get_center(self.width, len(docs_table[0]))
 
         for row in range(len(docs_table)):
-            if not docs_table[row][2:-2].isspace() and row > 1:
-                docs_table[row] = docs_table[row].replace("│    ", "│")
-                docs_table[row] = docs_table[row].replace(" │", "     │")
             self.pad.addstr(
                 row + self._start_row,
                 docs_offset,
@@ -88,7 +89,8 @@ class TranspilerPassPad:
         self._start_row += 2
         self._display_header("Circuit Diagram"[: self.width - 1])
         self._start_row += 1
-        if self.transpiler_pass.circuit_stats.depth < 150:
+        if self.transpiler_pass.circuit_stats.depth < 300:
+            # only if <300 depth, we will get a circuit to draw
             circ_string = [[self.circuit.draw(output="text", fold=self.width - 8)]]
         else:
             circ_string = [
@@ -144,7 +146,11 @@ class TranspilerPassPad:
 
     def _get_property_data(self):
         prop_data = []  # propname, value, state
-        for name, property_ in self.transpiler_pass.property_set.items():
+
+        # I need this to present in order to access the property set
+        # items
+
+        for name, property_ in self.property_set.items():
             if property_.prop_type not in (int, float, bool, str):
                 txt = (
                     "(dict)"
@@ -173,6 +179,7 @@ class TranspilerPassPad:
             tablefmt="simple_grid",
             stralign="center",
             numalign="center",
+            showindex=True,
         ).splitlines()
 
         props_offset = self._get_center(self.width, len(prop_set_table[0]))

@@ -399,6 +399,9 @@ class CLIView:
 
     def _get_pass_circuit(self, step):
         if step.pass_type == PassType.TRANSFORMATION:
+            if step.circuit_stats.depth > 300:
+                # means it had depth > 300, so we can't show it
+                return None
             return dag_to_circuit(step.dag)
         idx = step.index
         # Due to a bug in DAGCircuit.__eq__, we can not use ``step.dag != None``
@@ -420,6 +423,14 @@ class CLIView:
 
         return dag_to_circuit(self.transpilation_sequence.steps[idx].dag)
 
+    def _get_pass_property_set(self, step):
+        if step.property_set_index is not None:
+            return self.transpilation_sequence.steps[
+                step.property_set_index
+            ].property_set
+
+        return {}
+
     def _build_pass_pad(self, index):
         step = self.transpilation_sequence.steps[index]
         pad = curses.newpad(
@@ -429,6 +440,7 @@ class CLIView:
         pass_pad = TranspilerPassPad(
             step,
             self._get_pass_circuit(step),
+            self._get_pass_property_set(step),
             self._view_params["transpiler_pad_height"],
             self._view_params["transpiler_pad_width"],
             pad,
@@ -571,7 +583,6 @@ class CLIView:
 
             # refresh the screen and then the windows
             stdscr.refresh()
-
             self._refresh_base_windows(panel_resized, height, width)
 
             pad_to_render = None

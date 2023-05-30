@@ -55,6 +55,8 @@ class Debugger:
         Raises:
             DebuggerError: if multiple quantum circuits are supplied
         """
+        if view_type not in ["cli", "jupyter"]:
+            raise DebuggerError("Invalid view type supplied!")
 
         if not isinstance(circuit, QuantumCircuit):
             raise DebuggerError(
@@ -99,7 +101,7 @@ class Debugger:
         # Pass the model to the view:
         cls.view.transpilation_sequence = transpilation_sequence
 
-        if view_type == "timeline":
+        if view_type == "jupyter":
             cls.view.update_params(**kwargs)
             if show:
                 display(cls.view)
@@ -112,7 +114,7 @@ class Debugger:
             **kwargs,
         )
 
-        if view_type == "timeline":
+        if view_type == "jupyter":
             cls.view.update_summary()
             cls.view.add_class("done")
         else:
