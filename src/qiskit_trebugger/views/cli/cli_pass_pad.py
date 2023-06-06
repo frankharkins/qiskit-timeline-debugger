@@ -88,7 +88,7 @@ class TranspilerPassPad:
         self._start_row += 1
         if self.transpiler_pass.circuit_stats.depth < 300:
             # only if <300 depth, we will get a circuit to draw
-            circ_string = [[self.circuit.draw(output="text", fold=self.width - 8)]]
+            circ_string = [[self.circuit.draw(output="text", fold=100)]]
         else:
             circ_string = [
                 [
@@ -118,9 +118,8 @@ class TranspilerPassPad:
             log_string = (
                 f"{datetime.fromtimestamp(entry.time).strftime('%H:%M:%S.%f')[:-3]} | "
             )
-            argstr = [repr(arg) for arg in entry.args]
             # to do : Add args in message
-            log_string += f"{entry.levelname} \n {entry.msg}"
+            log_string += f"{entry.levelname} \n {entry.msg}" % entry.args
 
             log_data.append([log_string])
 
@@ -146,6 +145,14 @@ class TranspilerPassPad:
 
         # I need this to present in order to access the property set
         # items
+
+        # IMPORTANT POINTS
+
+        # 1. Render layout for the qubit mapping
+
+        # 2. Docs for the pass should come at the bottom
+
+        # 3.
 
         for name, property_ in self.property_set.items():
             if property_.prop_type not in (int, float, bool, str):
@@ -191,7 +198,7 @@ class TranspilerPassPad:
         self._add_title()
         self._add_information()
         self._add_properties()
-        self._add_documentation()
         self._add_circuit()
+        self._add_documentation()
         self._add_logs()
         self._add_property_set()

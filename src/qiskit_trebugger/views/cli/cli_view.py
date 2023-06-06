@@ -1,6 +1,8 @@
 import curses
-import tabulate
 from curses.textpad import Textbox
+
+import tabulate
+
 from qiskit.dagcircuit import DAGCircuit
 from qiskit.converters import dag_to_circuit
 
@@ -36,11 +38,11 @@ class CLIView:
         self._title_string = "Qiskit Transpiler Debugger"
 
         self._status_strings = {
-            "normal": " STATUS BAR  | ↑↓ keys / mouse cursor: Scrolling | 'I': Index into a pass | 'Q': Exit",
+            "normal": " STATUS BAR  | Arrow keys: Scrolling | 'I': Index into a pass | 'H': Toggle overview | 'Q': Exit",
             "index": " STATUS BAR  | Enter the index of the pass you want to view : ",
             "invalid": " STATUS BAR  | Invalid input entered. Press Enter to continue.",
             "out_of_bounds": " STATUS BAR  | Number entered is out of bounds. Please Enter to continue.",
-            "pass": " STATUS BAR  | Arrow keys: Scrolling | 'N/P': Move to next/previous pass | 'I': Index into a pass | 'B': Back to all passes | 'Q': Exit",
+            "pass": " STATUS BAR  | Arrow keys: Scrolling | 'N/P': Move to next/previous | 'I': Index into a pass | 'B': Back to all passes | 'Q': Exit",
         }
         # define status object
         self._reset_view_params()
@@ -49,17 +51,21 @@ class CLIView:
         self.transpilation_sequence = None
 
     def _reset_view_params(self):
+        # view parameters may be changed by the user
+        # try to make that configurable in the future
         self._view_params = {
             "curr_row": 0,
             "curr_col": 0,
             "last_width": 0,
             "last_height": 0,
             "pass_id": -1,
-            "transpiler_pad_width": 128,
+            "transpiler_pad_width": 500,
             "transpiler_pad_height": 2000,
             "transpiler_start_row": 6,
             "transpiler_start_col": None,
             "status_type": "normal",
+            "overview_visible": True,
+            "overview_change": False,
         }
 
     def _init_color(self):
@@ -83,10 +89,7 @@ class CLIView:
             self._view_params["curr_row"] = max(self._view_params["curr_row"], 0)
         elif key == curses.KEY_LEFT:
             self._view_params["curr_col"] -= 1
-            self._view_params["curr_col"] = max(self._view_params["curr_col"], 0)
-
         # to do
-
         elif key == curses.KEY_DOWN:
             self._view_params["curr_row"] += 1
             if self._view_params["status_type"] == "normal":
@@ -136,6 +139,16 @@ class CLIView:
             self._view_params["pass_id"] = -1
             self._view_params["curr_col"] = 0
             self._view_params["curr_row"] = 0
+
+        elif key in [ord("h"), ord("H")]:
+            self._view_params["overview_visible"] = not self._view_params[
+                "overview_visible"
+            ]
+            self._view_params["overview_change"] = True
+            self._view_params["curr_col"] = 0
+            self._view_params["curr_row"] = 0
+            if not self._view_params["overview_visible"]:
+                self._view_params["transpiler_start_col"] = 0
 
     def _build_title_win(self, cols):
         """Builds the title window for the debugger
@@ -206,11 +219,9 @@ class CLIView:
 
         return overview_stats
 
-    def _build_overview_win(self, cols):
-        overview_rows = 26
-        overview_cols = cols
+    def _build_overview_win(self, rows, cols):
         begin_row = 6
-        overview_win = curses.newwin(overview_rows, overview_cols, begin_row, 0)
+        overview_win = curses.newwin(rows, cols, begin_row, 0)
 
         total_passes = {"T": 0, "A": 0}
         for step in self.transpilation_sequence.steps:
@@ -220,25 +231,23 @@ class CLIView:
                 total_passes["A"] += 1
 
         total_pass_str = f"Total Passes : {total_passes['A'] + total_passes['T']}"[
-            : overview_cols - 1
+            : cols - 1
         ]
         pass_categories_str = (
             f"Transformation : {total_passes['T']} | Analysis : {total_passes['A']}"[
-                : overview_cols - 1
+                : cols - 1
             ]
         )
 
         start_x = 5
-        overview_win.addstr(
-            5, start_x, "Pass Overview"[: overview_cols - 1], curses.A_BOLD
-        )
+        overview_win.addstr(5, start_x, "Pass Overview"[: cols - 1], curses.A_BOLD)
         overview_win.addstr(6, start_x, total_pass_str)
         overview_win.addstr(7, start_x, pass_categories_str)
 
         # runtime
         runtime_str = (
             f"Runtime : {round(self.transpilation_sequence.total_runtime,2)} ms"[
-                : overview_cols - 1
+                : cols - 1
             ]
         )
         overview_win.addstr(9, start_x, runtime_str, curses.A_BOLD)
@@ -259,9 +268,7 @@ class CLIView:
         ).splitlines()
 
         for row in range(12, 12 + len(stats_table)):
-            overview_win.addstr(
-                row, start_x, stats_table[row - 12][: overview_cols - 1]
-            )
+            overview_win.addstr(row, start_x, stats_table[row - 12][: cols - 1])
 
         # for correct formatting of title
         max_line_length = len(stats_table[0])
@@ -269,12 +276,12 @@ class CLIView:
         # add titles
 
         # stats header
-        stats_str = "Circuit Statistics"[: overview_cols - 1]
+        stats_str = "Circuit Statistics"[: cols - 1]
         stats_head_offset = self._get_center(max_line_length, len(stats_str))
         overview_win.addstr(11, start_x + stats_head_offset, stats_str, curses.A_BOLD)
 
         # overview header
-        overview_str = "TRANSPILATION OVERVIEW"[: overview_cols - 1]
+        overview_str = "TRANSPILATION OVERVIEW"[: cols - 1]
         start_x_overview = start_x + self._get_center(
             max_line_length, len(overview_str)
         )
@@ -303,7 +310,7 @@ class CLIView:
             pass_title.hline(0, 0, "_", width - 4)
             pass_title.addstr(2, start_header, "Transpiler Passes", curses.A_BOLD)
             pass_title.hline(3, 0, "_", width - 4)
-        except:
+        except Exception as _:
             pass_title = None
 
         return pass_title
@@ -356,7 +363,7 @@ class CLIView:
                 else:
                     status_str = self._status_strings["pass"]
                     self._view_params["pass_id"] = num
-            except:
+            except ValueError as _:
                 # Invalid number entered
                 status_str = self._status_strings["invalid"]
             status_str = status_str[: cols - 1]
@@ -384,18 +391,17 @@ class CLIView:
             self._title = self._build_title_win(width)
             self._title.noutrefresh()
 
-            self._overview = self._build_overview_win(width)
+        overview_toggle = (
+            self._view_params["overview_visible"]
+            and self._view_params["overview_change"]
+        )
+        if resized or overview_toggle:
+            self._overview = self._build_overview_win(height, width)
             self._overview.noutrefresh()
 
-            pass_title_window = self._get_pass_title(width)
-            if pass_title_window:
-                pass_title_window.noutrefresh()
-
-        # render the status bar , irrespective of width / height
-        self._status_bar = self._get_statusbar_win(
-            height, width, self._view_params["status_type"]
-        )
-        self._status_bar.noutrefresh()
+        pass_title_window = self._get_pass_title(width)
+        if pass_title_window:
+            pass_title_window.noutrefresh()
 
     def _get_pass_circuit(self, step):
         if step.pass_type == PassType.TRANSFORMATION:
@@ -478,22 +484,29 @@ class CLIView:
 
     def _get_all_passes_pad(self):
         start_x = 4
-        table_width = 250  # for now
+        table_width = 500  # for now
         table_height = len(self._all_passes_table) + 1
         pass_pad = curses.newpad(table_height, table_width)
 
+        # centering is required for each row
         for row in range(3):
+            offset = self._get_center(
+                table_width, len(self._all_passes_table[row][: table_width - 1])
+            )
             pass_pad.addstr(
                 row,
-                start_x,
+                start_x + offset,
                 self._all_passes_table[row][: table_width - 1],
                 curses.A_BOLD | curses.color_pair(1),
             )
 
         # now start adding the passes
         for row in range(3, len(self._all_passes_table)):
+            offset = self._get_center(
+                table_width, len(self._all_passes_table[row][: table_width - 1])
+            )
             pass_pad.addstr(
-                row, start_x, self._all_passes_table[row][: table_width - 1]
+                row, start_x + offset, self._all_passes_table[row][: table_width - 1]
             )
 
         # populated pad with passes
@@ -522,13 +535,66 @@ class CLIView:
         if self._view_params["transpiler_start_col"] >= cols - 1:
             return
 
+        actual_width = pass_pad.getmaxyx()[1]
+        col_offset = (
+            actual_width - cols + self._view_params["transpiler_start_col"]
+        ) // 2
+
         pass_pad.noutrefresh(
             curr_row,
-            curr_col,
+            col_offset + curr_col,
             start_row,
             self._view_params["transpiler_start_col"],
             rows - 2,
-            cols - 1,
+            cols - 5,
+        )
+
+    def _pre_input(self, height, width):
+        """Function to render the pad before any input is entered
+           by the user
+
+        Args:
+            height (int): Number of rows
+            width (int): Number of cols
+        """
+        pad_to_render = None
+
+        if self._view_params["status_type"] == "index":
+            pass_id = self._view_params["pass_id"]
+            if pass_id == -1:
+                pad_to_render = self._all_passes_pad
+            else:
+                if self._pass_pad_list[pass_id] is None:
+                    self._build_pass_pad(pass_id)
+                pad_to_render = self._pass_pad_list[pass_id]
+
+            self._render_transpilation_pad(
+                pad_to_render,
+                self._view_params["curr_row"],
+                self._view_params["curr_col"],
+                height,
+                width,
+            )
+
+    def _post_input(self, height, width):
+        pad_to_render = None
+        if self._view_params["status_type"] == "normal":
+            pad_to_render = self._all_passes_pad
+        elif self._view_params["status_type"] in ["index", "pass"]:
+            # using zero based indexing
+            pass_id = self._view_params["pass_id"]
+            if pass_id >= 0:
+                self._view_params["status_type"] = "pass"
+                if self._pass_pad_list[pass_id] is None:
+                    self._build_pass_pad(pass_id)
+                pad_to_render = self._pass_pad_list[pass_id]
+
+        self._render_transpilation_pad(
+            pad_to_render,
+            self._view_params["curr_row"],
+            self._view_params["curr_col"],
+            height,
+            width,
         )
 
     def display(self, stdscr):
@@ -571,6 +637,8 @@ class CLIView:
                 self._view_params["last_width"] != width
                 or self._view_params["last_height"] != height
             )
+
+            self._view_params["overview_change"] = False
             if panel_initiated and panel_resized:
                 stdscr.clear()
 
@@ -578,35 +646,28 @@ class CLIView:
             self._handle_keystroke(key)
 
             # render width and height
-            whstr = "Width: {}, Height: {}".format(width, height)
+            whstr = f"Width: {width}, Height: {height}"
             stdscr.addstr(0, 0, whstr, curses.color_pair(1))
 
             # refresh the screen and then the windows
-            stdscr.refresh()
+            stdscr.noutrefresh()
             self._refresh_base_windows(panel_resized, height, width)
 
-            pad_to_render = None
-            if self._view_params["status_type"] == "normal":
-                pad_to_render = self._all_passes_pad
-            elif self._view_params["status_type"] in ["index", "pass"]:
-                # using zero based indexing
-                pass_id = self._view_params["pass_id"]
-                if pass_id >= 0:
-                    self._view_params["status_type"] = "pass"
-                    if self._pass_pad_list[pass_id] is None:
-                        self._build_pass_pad(pass_id)
-                    pad_to_render = self._pass_pad_list[pass_id]
+            # pre input rendering
+            self._pre_input(height, width)
 
-            self._render_transpilation_pad(
-                pad_to_render,
-                self._view_params["curr_row"],
-                self._view_params["curr_col"],
-                height,
-                width,
+            # render the status bar , irrespective of width / height
+            self._status_bar = self._get_statusbar_win(
+                height, width, self._view_params["status_type"]
             )
+            self._status_bar.noutrefresh()
+
+            # post input rendering
+            self._post_input(height, width)
 
             self._view_params["last_width"] = width
             self._view_params["last_height"] = height
+
             curses.doupdate()
 
             # wait for the next input

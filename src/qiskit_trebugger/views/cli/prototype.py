@@ -5,6 +5,16 @@ import qiskit
 from qiskit.circuit.random import random_circuit
 from curses.textpad import Textbox
 
+""" 
+If I press H, the transpilation overview panel should toggle between hidden and visible 
+
+what does it mean if it is hidden? In terms of the application, the transpilation pass 
+start col goes to 1 and row stays the same 
+
+
+
+"""
+
 
 def color_transformation(string):
     # dark purple color
@@ -120,8 +130,8 @@ def get_title(cols):
     return title_window
 
 
-def get_overview(cols):
-    overview_rows = 26
+def get_overview(rows, cols):
+    overview_rows = rows
     overview_cols = cols
     begin_row = 6
     overview_win = curses.newwin(overview_rows, overview_cols, begin_row, 0)
@@ -187,11 +197,11 @@ def get_statusbar(rows, cols, status_type="normal"):
     # This will only return a status bar window, TEXT processing is done within this function ONLY
 
     status_strings = {
-        "normal": " STATUS BAR  | Press ↑↓ keys or mouse cursor to scroll | 'I' to index into a pass | 'Q' to exit",
+        "normal": " STATUS BAR  | Press ↑↓ keys or mouse cursor to scroll | 'I' to index into a pass | 'H' to toggle overview | 'Q' to exit",
         "index": " STATUS BAR  | Enter the index of the pass you want to view : ",
         "invalid": " STATUS BAR  | Invalid input entered. Press Enter to continue.",
         "out_of_bounds": " STATUS BAR  | Number entered is out of bounds. Please Enter to continue.",
-        "pass": " STATUS BAR  | Press 'N/P' to move to next/previous pass | 'I' to index into a pass | 'B' to go back to all passes | 'Q' to exit",
+        "pass": " STATUS BAR  | Press 'N/P' to move to next/previous pass | 'I' to index into a pass | 'B' to go back to all passes | 'H' to toggle overview | 'Q' to exit",
     }
 
     statusbarstr = status_strings[status_type][: cols - 1]
@@ -263,24 +273,23 @@ def get_base_pass_pad():
     # populated only once and same is for the pad
 
     start_x = 4
-    table_width = 250  # for now
+    table_width = 500  # for now
     table_height = len(pass_table) + 1
     pass_pad = curses.newpad(table_height, table_width)
 
     for row in range(3):
+        offset = get_center(table_width, len(pass_table[row][: table_width - 1]))
         pass_pad.addstr(
             row,
-            start_x,
+            start_x + offset,
             pass_table[row][: table_width - 1],
             curses.A_BOLD | curses.color_pair(1),
         )
 
     # now start adding the passes
     for row in range(3, len(pass_table)):
-        if "Transformation" in pass_table[row]:
-            pass_pad.addstr(row, start_x, pass_table[row][: table_width - 1])
-        else:
-            pass_pad.addstr(row, start_x, pass_table[row][: table_width - 1])
+        offset = get_center(table_width, len(pass_table[row][: table_width - 1]))
+        pass_pad.addstr(row, start_x + offset, pass_table[row][: table_width - 1])
 
     # populated pad with passes
     return pass_pad
@@ -298,8 +307,8 @@ def get_pass_deails_pad(curr_id):
     # 4. Create a new pad with the pass details
     # 5. Return the pad
 
-    table_height = 350  # for now
-    table_width = max(curses.COLS - TRANSPILER_STEPS_DIMS["PASSES_START_COL"], 127)
+    table_height = 1000  # for now
+    table_width = 500
     pass_pad = curses.newpad(table_height, table_width)
 
     start_row = 0
@@ -365,7 +374,7 @@ def get_pass_deails_pad(curr_id):
     )
     start_row += 1
 
-    pass_circ = [[pass_circuits[curr_id].draw(fold=table_width - 10)]]
+    pass_circ = [[pass_circuits[curr_id].draw(fold=100)]]
 
     circ_table = tabulate.tabulate(
         tabular_data=pass_circ,
@@ -453,26 +462,26 @@ def render_transpilation_pad(pass_pad, curr_row, curr_col, rows, cols):
     if TRANSPILER_STEPS_DIMS["PASSES_START_COL"] >= cols - 1:
         return
 
-    pass_pad.refresh(
+    # required for relative centering
+    actual_width = pass_pad.getmaxyx()[1]
+    col_offset = (actual_width - cols + TRANSPILER_STEPS_DIMS["PASSES_START_COL"]) // 2
+
+    pass_pad.noutrefresh(
         curr_row,
-        curr_col,
+        col_offset + curr_col,
         start_row,
         TRANSPILER_STEPS_DIMS["PASSES_START_COL"],
         rows - 2,
-        cols - 1,
+        cols - 5,
     )
 
 
-def refresh_base_windows(width):
+def refresh_base_windows(height, width):
     title_window = get_title(width)
     title_window.noutrefresh()
 
-    info_window = get_overview(width)
+    info_window = get_overview(height, width)
     info_window.noutrefresh()
-
-    pass_title_window = get_pass_title(width)
-    if pass_title_window:
-        pass_title_window.noutrefresh()
 
 
 class CLIView:
@@ -504,15 +513,15 @@ class CLIView:
         curr_col = 0
         last_width, last_height = 0, 0
         status_type = "normal"
-
+        overview_state = "visible"
         height, width = stdscr.getmaxyx()
-        refresh_base_windows(width)
+
+        refresh_base_windows(height, width)
 
         base_passes_pad = get_base_pass_pad()
         pass_details_pads = [
             get_pass_deails_pad(i) for i in range(len(transpiler_data))
         ]
-
         # Loop where k is the last character pressed
         while k not in [ord("q"), ord("Q")]:
             # Initialization
@@ -527,7 +536,6 @@ class CLIView:
                 curr_row = max(curr_row, 0)
             elif k == curses.KEY_LEFT:
                 curr_col -= 1
-                curr_col = max(curr_col, 0)
 
             # different cases to handle as different views are
             # present in the debugger
@@ -574,6 +582,12 @@ class CLIView:
                 PASSES_INFO["pass_id"] = -1
                 curr_col = 0
                 curr_row = 0
+            elif k in [ord("h"), ord("H")]:
+                overview_state = "hidden" if overview_state == "visible" else "visible"
+                curr_col = 0
+                curr_row = 0
+                if overview_state == "hidden":
+                    TRANSPILER_STEPS_DIMS["PASSES_START_COL"] = 0
 
             # Rendering some text
             whstr = "Width: {}, Height: {}".format(width, height)
@@ -582,13 +596,34 @@ class CLIView:
             # Refresh the screen
             stdscr.refresh()
 
-            if width != last_width or height != last_height:
-                refresh_base_windows(width)
+            if (
+                width != last_width
+                or height != last_height
+                or overview_state == "visible"
+            ):
+                refresh_base_windows(height, width)
+
+            pass_title_window = get_pass_title(width)
+            if pass_title_window:
+                pass_title_window.noutrefresh()
+
+            if status_type == "index":
+                if PASSES_INFO["pass_id"] == -1:
+                    render_transpilation_pad(
+                        base_passes_pad, curr_row, curr_col, height, width
+                    )
+                else:
+                    render_transpilation_pad(
+                        pass_details_pads[PASSES_INFO["pass_id"]],
+                        curr_row,
+                        curr_col,
+                        height,
+                        width,
+                    )
 
             status_window = get_statusbar(height, width, status_type)
             status_window.noutrefresh()
 
-            curses.doupdate()
             if status_type == "normal":
                 render_transpilation_pad(
                     base_passes_pad, curr_row, curr_col, height, width
@@ -604,6 +639,8 @@ class CLIView:
                         height,
                         width,
                     )
+
+            curses.doupdate()
             last_width = width
             last_height = height
 
