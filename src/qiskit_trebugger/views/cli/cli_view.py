@@ -38,11 +38,11 @@ class CLIView:
         self._title_string = "Qiskit Transpiler Debugger"
 
         self._status_strings = {
-            "normal": " STATUS BAR  | Arrow keys: Scrolling | 'I': Index into a pass | 'H': Toggle overview | 'Q': Exit",
+            "normal": " STATUS BAR  | Arrow keys: Scrolling | 'U': Page up | 'I': Index into a pass | 'H': Toggle overview | 'Q': Exit",
             "index": " STATUS BAR  | Enter the index of the pass you want to view : ",
             "invalid": " STATUS BAR  | Invalid input entered. Press Enter to continue.",
             "out_of_bounds": " STATUS BAR  | Number entered is out of bounds. Please Enter to continue.",
-            "pass": " STATUS BAR  | Arrow keys: Scrolling | 'N/P': Move to next/previous | 'I': Index into a pass | 'B': Back to all passes | 'Q': Exit",
+            "pass": " STATUS BAR  | Arrow keys: Scrolling | 'U': Page up | 'N/P': Move to next/previous | 'I': Index into a pass | 'B': Back to all passes | 'Q': Exit",
         }
         # define status object
         self._reset_view_params()
@@ -116,6 +116,8 @@ class CLIView:
                     self._view_params["curr_col"],
                     curses.COLS - self._view_params["transpiler_start_col"] - 1,
                 )
+        elif key in [ord("u"), ord("U")]:
+            self._view_params["curr_row"] = 0
         elif key in [ord("i"), ord("I")]:
             # user wants to index into the pass
             self._view_params["status_type"] = "index"
@@ -396,8 +398,12 @@ class CLIView:
             and self._view_params["overview_change"]
         )
         if resized or overview_toggle:
-            self._overview = self._build_overview_win(height, width)
-            self._overview.noutrefresh()
+            try:
+                self._overview = self._build_overview_win(height, width)
+                self._overview.noutrefresh()
+            except:
+                # change the view param for overview
+                self._view_params["transpiler_start_col"] = 0
 
         pass_title_window = self._get_pass_title(width)
         if pass_title_window:
@@ -532,13 +538,12 @@ class CLIView:
             return
 
         # if we don't have enough columns
-        if self._view_params["transpiler_start_col"] >= cols - 1:
+        if self._view_params["transpiler_start_col"] >= cols - 6:
             return
 
         actual_width = pass_pad.getmaxyx()[1]
-        col_offset = (
-            actual_width - cols + self._view_params["transpiler_start_col"]
-        ) // 2
+        window_width = cols - self._view_params["transpiler_start_col"]
+        col_offset = (actual_width - window_width) // 2
 
         pass_pad.noutrefresh(
             curr_row,
@@ -546,7 +551,7 @@ class CLIView:
             start_row,
             self._view_params["transpiler_start_col"],
             rows - 2,
-            cols - 5,
+            cols - 6,
         )
 
     def _pre_input(self, height, width):
@@ -657,6 +662,7 @@ class CLIView:
             self._pre_input(height, width)
 
             # render the status bar , irrespective of width / height
+            # and get the input (if any)
             self._status_bar = self._get_statusbar_win(
                 height, width, self._view_params["status_type"]
             )

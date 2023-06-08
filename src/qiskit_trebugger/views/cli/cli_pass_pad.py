@@ -25,7 +25,7 @@ class TranspilerPassPad:
         pass_name = f"{self.transpiler_pass.index}. {self.transpiler_pass.name}"[
             : self.width - 1
         ]
-        title_offset = self._get_center(self.width, len(pass_name))
+        title_offset = self._get_center(self.width - 4, len(pass_name))
         self.pad.addstr(
             self._start_row,
             title_offset,

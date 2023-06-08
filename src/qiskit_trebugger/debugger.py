@@ -65,8 +65,11 @@ class Debugger:
         if backend is None:
             backend = Aer.get_backend("qasm_simulator")
 
-        # Create the view:
         if view_type == "cli":
+            if not cls._is_regular_interpreter():
+                raise DebuggerError(
+                    "Can not invoke CLI view in IPython or Juptyer Environment!"
+                )
             cls.view = CLIView()
         else:
             cls.view = TimelineView()
@@ -117,7 +120,7 @@ class Debugger:
         if view_type == "jupyter":
             cls.view.update_summary()
             cls.view.add_class("done")
-        else:
+        elif view_type == "cli":
             curses.wrapper(cls.view.display)
 
     @classmethod
@@ -127,7 +130,7 @@ class Debugger:
         Args:
             transpilation_sequence (TranspilationSequence):
                                 data structure to store the transpiler
-                                passes as a sequence of transplation
+                                passes as a sequence of transpilation
                                 steps
         """
 
@@ -157,4 +160,30 @@ class Debugger:
 
     @classmethod
     def _get_data_collector(cls, transpilation_sequence):
+        """Returns the data collector callback function for transpiler.
+
+        Args:
+            transpilation_sequence (list): List of transpilation steps
+
+        Returns:
+            function: Callback function for transpiler
+        """
         return TranspilerDataCollector(transpilation_sequence).transpiler_callback
+
+    @classmethod
+    def _is_regular_interpreter(cls):
+        """Checks if the interpreter is regular python interpreter or IPython
+
+        Returns:
+            bool: True if regular python interpreter, False otherwise
+        """
+        try:
+            # The function get_ipython() is available on the global
+            # namespace by default when IPython is started.
+            _ = get_ipython().__class__.__name__
+
+            # if this works, I am not in regular python
+            # interpreter
+            return False
+        except NameError:
+            return True
