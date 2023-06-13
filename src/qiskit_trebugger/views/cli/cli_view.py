@@ -118,6 +118,7 @@ class CLIView:
                 )
         elif key in [ord("u"), ord("U")]:
             self._view_params["curr_row"] = 0
+
         elif key in [ord("i"), ord("I")]:
             # user wants to index into the pass
             self._view_params["status_type"] = "index"
@@ -647,15 +648,14 @@ class CLIView:
             if panel_initiated and panel_resized:
                 stdscr.clear()
 
-            # handle key strokes
             self._handle_keystroke(key)
 
-            # render width and height
             whstr = f"Width: {width}, Height: {height}"
             stdscr.addstr(0, 0, whstr, curses.color_pair(1))
 
             # refresh the screen and then the windows
             stdscr.noutrefresh()
+
             self._refresh_base_windows(panel_resized, height, width)
 
             # pre input rendering

@@ -43,7 +43,7 @@ class TranspilerPassPad:
 
         self._display_header(info_string)
 
-    def _add_properties(self):
+    def _add_statistics(self):
         self._start_row += 2
 
         props_string = f"Depth : {self.transpiler_pass.circuit_stats.depth} | "
@@ -55,6 +55,64 @@ class TranspilerPassPad:
         props_string = props_string[: self.width - 1]
         props_offset = self._get_center(self.width, len(props_string))
         self.pad.addstr(self._start_row, props_offset, props_string)
+
+    def _get_property_data(self):
+        prop_data = []  # propname, value, state
+
+        # I need this to present in order to access the property set
+        # items
+
+        # IMPORTANT POINTS
+
+        # 1. Render layout for the qubit mapping
+
+        # 2. Docs for the pass should come at the bottom
+
+        # 3.
+
+        for name, property_ in self.property_set.items():
+            if property_.prop_type not in (int, float, bool, str):
+                txt = (
+                    "(dict)"
+                    if isinstance(property_.value, defaultdict)
+                    else "(" + property_.prop_type.__name__ + ")"
+                )
+            else:
+                txt = str(property_.value)
+
+            prop_data.append([name, txt, property_.state])
+
+        return prop_data
+
+    def _add_property_set(self):
+        self._start_row += 2
+        self._display_header("Property Set"[: self.width - 1])
+        self._start_row += 1
+
+        headers = ["Property", "Value", "State"]
+
+        prop_data = self._get_property_data()
+
+        prop_set_table = tabulate.tabulate(
+            tabular_data=prop_data,
+            headers=headers,
+            tablefmt="simple_grid",
+            stralign="center",
+            numalign="center",
+            showindex=True,
+        ).splitlines()
+
+        props_offset = self._get_center(self.width, len(prop_set_table[0]))
+        for row in range(len(prop_set_table)):
+            # 0 is default
+            highlight = 0 if row > 2 else curses.A_BOLD
+            self.pad.addstr(
+                row + self._start_row,
+                props_offset,
+                prop_set_table[row][: self.width - 1],
+                highlight,
+            )
+        self._start_row += len(prop_set_table)
 
     def _add_documentation(self):
         self._start_row += 2
@@ -140,65 +198,11 @@ class TranspilerPassPad:
             )
         self._start_row += len(log_table)
 
-    def _get_property_data(self):
-        prop_data = []  # propname, value, state
-
-        # I need this to present in order to access the property set
-        # items
-
-        # IMPORTANT POINTS
-
-        # 1. Render layout for the qubit mapping
-
-        # 2. Docs for the pass should come at the bottom
-
-        # 3.
-
-        for name, property_ in self.property_set.items():
-            if property_.prop_type not in (int, float, bool, str):
-                txt = (
-                    "(dict)"
-                    if isinstance(property_.value, defaultdict)
-                    else "(" + property_.prop_type.__name__ + ")"
-                )
-            else:
-                txt = str(property_.value)
-
-            prop_data.append([name, txt, property_.state])
-
-        return prop_data
-
-    def _add_property_set(self):
-        self._start_row += 2
-        self._display_header("Property Set"[: self.width - 1])
-        self._start_row += 1
-
-        headers = ["Property", "Value", "State"]
-
-        prop_data = self._get_property_data()
-
-        prop_set_table = tabulate.tabulate(
-            tabular_data=prop_data,
-            headers=headers,
-            tablefmt="simple_grid",
-            stralign="center",
-            numalign="center",
-            showindex=True,
-        ).splitlines()
-
-        props_offset = self._get_center(self.width, len(prop_set_table[0]))
-        for row in range(len(prop_set_table)):
-            self.pad.addstr(
-                row + self._start_row,
-                props_offset,
-                prop_set_table[row][: self.width - 1],
-            )
-
     def build_pad(self):
         self._add_title()
         self._add_information()
-        self._add_properties()
-        self._add_circuit()
-        self._add_documentation()
-        self._add_logs()
+        self._add_statistics()
         self._add_property_set()
+        self._add_circuit()
+        self._add_logs()
+        self._add_documentation()

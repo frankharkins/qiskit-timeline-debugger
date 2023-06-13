@@ -2,4 +2,6 @@ global-exclude *.py[cod]
 
 # Include test files
 recursive-include tests *.py 
+recursive-include imgs *.png 
+recursive-include imgs *.gif 
 include tests/ipython/*.ipynb 
