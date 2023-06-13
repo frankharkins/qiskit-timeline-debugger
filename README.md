@@ -96,9 +96,9 @@ debugger.debug(circuit, optimization_level = 2, backend = backend, initial_layou
 - The CLI view provides keyboard shortcuts for easy navigation and access to transpiler information.
 - An **interactive status bar** at the bottom of the screen provides information about the current state of the debugger. 
 
-<img src = "imgs/cli/status-main.png" width = "80%"  >
-<img src = "imgs/cli/status-input.png"width = "80%" >
-<img src = "imgs/cli/status-idx.png"width = "80%" >
+<img src = "imgs/cli/status-main.png">
+<img src = "imgs/cli/status-input.png">
+<img src = "imgs/cli/status-idx.png">
 
 
 #### 3. Transpiler Logs and Property sets
