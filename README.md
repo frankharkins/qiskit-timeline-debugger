@@ -106,7 +106,10 @@ debugger.debug(circuit, optimization_level = 2, backend = backend, initial_layou
 - Emits transpiler logs associated with each of the transpiler passes.
 - Highlights addition to property set and its changes during the transpilation process.
 
-<img src = "imgs/cli/indexed-2.png" width = "80%">
+Circuit Diagram and Docs             |  Logs and Property Set
+:-------------------------:|:-------------------------:
+<img src = "imgs/cli/indexed-1.png" width = "90%">  |  <img src = "imgs/cli/indexed-2.png" width = "90%">
+
 
 
 ## Demonstration and Blog
