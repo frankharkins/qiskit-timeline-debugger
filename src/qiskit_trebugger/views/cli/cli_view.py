@@ -9,6 +9,7 @@ from qiskit.converters import dag_to_circuit
 
 from ...model.pass_type import PassType
 from .cli_pass_pad import TranspilerPassPad
+from .config import COLORS
 
 
 class CLIView:
@@ -44,6 +45,8 @@ class CLIView:
             "out_of_bounds": " STATUS BAR  | Number entered is out of bounds. Please Enter to continue.",
             "pass": " STATUS BAR  | Arrow keys: Scrolling | 'U': Page up | 'N/P': Move to next/previous | 'I': Index into a pass | 'B': Back to all passes | 'Q': Exit",
         }
+
+        self._colors = {"title": None, "status": None, "base_pass_title": None}
         # define status object
         self._reset_view_params()
 
@@ -71,14 +74,16 @@ class CLIView:
     def _init_color(self):
         # Start colors in curses
         curses.start_color()
-        curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
-        curses.init_pair(2, curses.COLOR_MAGENTA, curses.COLOR_WHITE)
-        curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_CYAN)
-        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK)
-        self.CYAN_ON_BLACK = curses.color_pair(1)
-        self.MAGENTA_ON_WHITE = curses.color_pair(2)
-        self.BLACK_ON_CYAN = curses.color_pair(3)
-        self.WHITE_ON_BLACK = curses.color_pair(4)
+
+        curses.init_pair(1, COLORS.TITLE["front"], COLORS.TITLE["back"])
+        curses.init_pair(2, COLORS.STATUS["front"], COLORS.STATUS["back"])
+        curses.init_pair(
+            3, COLORS.BASE_PASSES_TITLE["front"], COLORS.BASE_PASSES_TITLE["back"]
+        )
+
+        self._colors["title"] = curses.color_pair(1)
+        self._colors["status"] = curses.color_pair(2)
+        self._colors["base_pass_title"] = curses.color_pair(3)
 
     def _get_center(self, width, string_len, divisor=2):
         return max(0, int(width // divisor - string_len // 2 - string_len % 2))
@@ -171,7 +176,7 @@ class CLIView:
 
         # Add title string to the title window
         start_x_title = self._get_center(title_cols, len(title_str))
-        title_window.bkgd(self.MAGENTA_ON_WHITE)
+        title_window.bkgd(self._colors["title"])
         title_window.hline(0, 0, "-", title_cols)
         title_window.addstr(1, start_x_title, title_str, curses.A_BOLD)
         title_window.hline(2, 0, "-", title_cols)
@@ -344,7 +349,7 @@ class CLIView:
         status_str = self._status_strings[status_type][: cols - 1]
 
         statusbar_window = curses.newwin(1, cols, rows - 1, 0)
-        statusbar_window.bkgd(" ", self.BLACK_ON_CYAN)
+        statusbar_window.bkgd(" ", self._colors["status"])
 
         offset = 0
         statusbar_window.addstr(0, offset, status_str)
@@ -504,7 +509,7 @@ class CLIView:
                 row,
                 start_x + offset,
                 self._all_passes_table[row][: table_width - 1],
-                curses.A_BOLD | curses.color_pair(1),
+                curses.A_BOLD | self._colors["base_pass_title"],
             )
 
         # now start adding the passes
@@ -632,7 +637,6 @@ class CLIView:
         assert len(self._pass_pad_list) > 0
 
         while key not in [ord("q"), ord("Q")]:
-            # Initialization
             height, width = stdscr.getmaxyx()
 
             # Check for clearing
@@ -644,18 +648,17 @@ class CLIView:
                 or self._view_params["last_height"] != height
             )
 
-            self._view_params["overview_change"] = False
             if panel_initiated and panel_resized:
                 stdscr.clear()
 
+            self._view_params["overview_change"] = False
             self._handle_keystroke(key)
 
             whstr = f"Width: {width}, Height: {height}"
-            stdscr.addstr(0, 0, whstr, curses.color_pair(1))
+            stdscr.addstr(0, 0, whstr)
 
             # refresh the screen and then the windows
             stdscr.noutrefresh()
-
             self._refresh_base_windows(panel_resized, height, width)
 
             # pre input rendering

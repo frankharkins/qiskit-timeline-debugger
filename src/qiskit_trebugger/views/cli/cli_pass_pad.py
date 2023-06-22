@@ -30,7 +30,7 @@ class TranspilerPassPad:
             self._start_row,
             title_offset,
             pass_name,
-            curses.A_BOLD | curses.color_pair(1),
+            curses.A_BOLD,
         )
         self._start_row += 1
         self.pad.hline(self._start_row, 0, "_", self.width - 4)
@@ -63,12 +63,6 @@ class TranspilerPassPad:
         # items
 
         # IMPORTANT POINTS
-
-        # 1. Render layout for the qubit mapping
-
-        # 2. Docs for the pass should come at the bottom
-
-        # 3.
 
         for name, property_ in self.property_set.items():
             if property_.prop_type not in (int, float, bool, str):
