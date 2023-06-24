@@ -39,11 +39,11 @@ class CLIView:
         self._title_string = "Qiskit Transpiler Debugger"
 
         self._status_strings = {
-            "normal": " STATUS BAR  | Arrow keys: Scrolling | 'U': Page up | 'I': Index into a pass | 'H': Toggle overview | 'Q': Exit",
+            "normal": " STATUS BAR  | Arrow keys: Scrolling | 'U/D': Page up/down | 'I': Index into a pass | 'H': Toggle overview | 'Q': Exit",
             "index": " STATUS BAR  | Enter the index of the pass you want to view : ",
             "invalid": " STATUS BAR  | Invalid input entered. Press Enter to continue.",
             "out_of_bounds": " STATUS BAR  | Number entered is out of bounds. Please Enter to continue.",
-            "pass": " STATUS BAR  | Arrow keys: Scrolling | 'U': Page up | 'N/P': Move to next/previous | 'I': Index into a pass | 'B': Back to all passes | 'Q': Exit",
+            "pass": " STATUS BAR  | Arrow keys: Scrolling | 'U/D': Page up/down | 'N/P': Move to next/previous | 'I': Index into a pass | 'B': Back to all passes | 'Q': Exit",
         }
 
         self._colors = {"title": None, "status": None, "base_pass_title": None}
@@ -94,7 +94,6 @@ class CLIView:
             self._view_params["curr_row"] = max(self._view_params["curr_row"], 0)
         elif key == curses.KEY_LEFT:
             self._view_params["curr_col"] -= 1
-        # to do
         elif key == curses.KEY_DOWN:
             self._view_params["curr_row"] += 1
             if self._view_params["status_type"] == "normal":
@@ -103,7 +102,6 @@ class CLIView:
                 )
             elif self._view_params["status_type"] in ["index", "pass"]:
                 self._view_params["curr_row"] = min(
-                    # as we have 350 rows by default
                     self._view_params["curr_row"],
                     1999,
                 )
@@ -122,7 +120,19 @@ class CLIView:
                     curses.COLS - self._view_params["transpiler_start_col"] - 1,
                 )
         elif key in [ord("u"), ord("U")]:
-            self._view_params["curr_row"] = 0
+            self._view_params["curr_row"] = max(self._view_params["curr_row"] - 10, 0)
+
+        elif key in [ord("d"), ord("D")]:
+            self._view_params["curr_row"] += 10
+            if self._view_params["status_type"] == "normal":
+                self._view_params["curr_row"] = min(
+                    self._view_params["curr_row"], len(self._all_passes_table) - 1
+                )
+            elif self._view_params["status_type"] in ["index", "pass"]:
+                self._view_params["curr_row"] = min(
+                    self._view_params["curr_row"],
+                    1999,
+                )
 
         elif key in [ord("i"), ord("I")]:
             # user wants to index into the pass

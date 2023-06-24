@@ -81,7 +81,8 @@ class TranspilerDataCollector:
 
                 for node in dag.op_nodes(include_directives=False):
                     operands_count = len(node.qargs)
-                    circ_ops[operands_count] += 1
+                    if operands_count < 4:
+                        circ_ops[operands_count] += 1
 
                 transpilation_step.circuit_stats.ops_1q = circ_ops[1]
                 transpilation_step.circuit_stats.ops_2q = circ_ops[2]
