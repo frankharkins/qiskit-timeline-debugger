@@ -13,8 +13,10 @@ from .config import COLORS
 
 
 class CLIView:
+    """A class representing the CLI view for the Qiskit Transpiler Debugger."""
+
     def __init__(self):
-        # define different components
+        """Initialize the CLIView object."""
         self._title = None
         self._overview = None
 
@@ -23,7 +25,7 @@ class CLIView:
         self._pass_table_headers = [
             "Pass Name",
             "Pass Type",
-            "Runtime",
+            "Runtime (ms)",
             "Depth",
             "Size",
             "1q Gates",
@@ -46,7 +48,12 @@ class CLIView:
             "pass": " STATUS BAR  | Arrow keys: Scrolling | 'U/D': Page up/down | 'N/P': Move to next/previous | 'I': Index into a pass | 'B': Back to all passes | 'Q': Exit",
         }
 
-        self._colors = {"title": None, "status": None, "base_pass_title": None}
+        self._colors = {
+            "title": None,
+            "status": None,
+            "base_pass_title": None,
+            "changing_pass": None,
+        }
         # define status object
         self._reset_view_params()
 
@@ -54,8 +61,8 @@ class CLIView:
         self.transpilation_sequence = None
 
     def _reset_view_params(self):
-        # view parameters may be changed by the user
-        # try to make that configurable in the future
+        """Reset the view parameters to their default values."""
+
         self._view_params = {
             "curr_row": 0,
             "curr_col": 0,
@@ -72,6 +79,7 @@ class CLIView:
         }
 
     def _init_color(self):
+        """Initialize colors for the CLI interface."""
         # Start colors in curses
         curses.start_color()
 
@@ -80,15 +88,35 @@ class CLIView:
         curses.init_pair(
             3, COLORS.BASE_PASSES_TITLE["front"], COLORS.BASE_PASSES_TITLE["back"]
         )
+        curses.init_pair(4, COLORS.CHANGING_PASS["front"], COLORS.CHANGING_PASS["back"])
 
         self._colors["title"] = curses.color_pair(1)
         self._colors["status"] = curses.color_pair(2)
         self._colors["base_pass_title"] = curses.color_pair(3)
+        self._colors["changing_pass"] = curses.color_pair(4)
 
     def _get_center(self, width, string_len, divisor=2):
+        """Calculate the starting position for centering a string.
+
+        Args:
+            width (int): Total width of the container.
+            string_len (int): Length of the string to be centered.
+            divisor (int, optional): Divisor for the centering calculation. Defaults to 2.
+
+        Returns:
+            int: Starting position for centering the string.
+        """
         return max(0, int(width // divisor - string_len // 2 - string_len % 2))
 
     def _handle_keystroke(self, key):
+        """Handle the keystrokes for navigation within the CLI interface.
+
+        Args:
+            key (int): The key pressed by the user.
+
+        Returns:
+            None
+        """
         if key == curses.KEY_UP:
             self._view_params["curr_row"] -= 1
             self._view_params["curr_row"] = max(self._view_params["curr_row"], 0)
@@ -203,6 +231,11 @@ class CLIView:
         return title_window
 
     def _get_overview_stats(self):
+        """Get the overview statistics for the transpilation sequence.
+
+        Returns:
+            dict: A dictionary containing overview statistics for the transpilation sequence.
+        """
         init_step = self.transpilation_sequence.steps[0]
         final_step = self.transpilation_sequence.steps[-1]
 
@@ -238,6 +271,15 @@ class CLIView:
         return overview_stats
 
     def _build_overview_win(self, rows, cols):
+        """Build and return the overview window for the debugger.
+
+        Args:
+            rows (int): Height of the window.
+            cols (int): Width of the window.
+
+        Returns:
+            curses.window: The overview window object.
+        """
         begin_row = 6
         overview_win = curses.newwin(rows, cols, begin_row, 0)
 
@@ -312,6 +354,14 @@ class CLIView:
         return overview_win
 
     def _get_pass_title(self, cols):
+        """Get the window object for the title of the pass table.
+
+        Args:
+            cols (int): Width of the window.
+
+        Returns:
+            curses.window: The window object for the pass title.
+        """
         height = 4
 
         width = max(5, cols - self._view_params["transpiler_start_col"] - 1)
@@ -491,6 +541,11 @@ class CLIView:
         )
 
     def _get_all_passes_table(self):
+        """Generate and return the table containing all the transpiler passes.
+
+        Returns:
+            list: The list representing the table of all transpiler passes.
+        """
         # build from the transpilation sequence
         # make table
         pass_table = tabulate.tabulate(
@@ -504,14 +559,35 @@ class CLIView:
 
         return pass_table
 
+    def _get_changing_pass_list(self):
+        """Get the list of indices of passes that caused a change in the circuit.
+
+        Returns:
+            list: A list containing the indices of changing passes.
+        """
+        pass_id_list = []
+        for i in range(1, len(self.transpilation_sequence.steps)):
+            prev_step = self.transpilation_sequence.steps[i - 1]
+            curr_step = self.transpilation_sequence.steps[i]
+            if prev_step.circuit_stats != curr_step.circuit_stats:
+                pass_id_list.append(i)
+        return pass_id_list
+
     def _get_all_passes_pad(self):
+        """Generate and return the pad containing all the transpiler passes.
+
+        Returns:
+            curses.pad: The pad containing all the transpiler passes.
+        """
         start_x = 4
         table_width = 500  # for now
         table_height = len(self._all_passes_table) + 1
         pass_pad = curses.newpad(table_height, table_width)
 
+        header_height = 3
+
         # centering is required for each row
-        for row in range(3):
+        for row in range(header_height):
             offset = self._get_center(
                 table_width, len(self._all_passes_table[row][: table_width - 1])
             )
@@ -522,14 +598,39 @@ class CLIView:
                 curses.A_BOLD | self._colors["base_pass_title"],
             )
 
+        # generate a changing pass set to see which pass
+        # changed the circuit and which didnt
+        changing_pass_list = set(self._get_changing_pass_list())
+
+        def _is_changing_pass_row(row):
+            # dashes only at even rows
+            if row % 2 == 0:
+                return False
+            else:
+                index = (row - header_height) // 2
+                if index in changing_pass_list:
+                    return True
+                return False
+
         # now start adding the passes
-        for row in range(3, len(self._all_passes_table)):
+        for row in range(header_height, len(self._all_passes_table)):
             offset = self._get_center(
                 table_width, len(self._all_passes_table[row][: table_width - 1])
             )
-            pass_pad.addstr(
-                row, start_x + offset, self._all_passes_table[row][: table_width - 1]
-            )
+
+            if _is_changing_pass_row(row):
+                pass_pad.addstr(
+                    row,
+                    start_x + offset,
+                    self._all_passes_table[row][: table_width - 1],
+                    curses.A_BOLD | self._colors["changing_pass"],
+                )
+            else:
+                pass_pad.addstr(
+                    row,
+                    start_x + offset,
+                    self._all_passes_table[row][: table_width - 1],
+                )
 
         # populated pad with passes
         return pass_pad
@@ -539,8 +640,17 @@ class CLIView:
 
         NOTE : this is agnostic of whether we are passing the base pad
             or the individual transpiler pass pad. Why?
-
             Because we are not shifting the pad, we are just refreshing it.
+
+        Args:
+            pass_pad (curses.pad): The pad containing the individual pass details.
+            curr_row (int): Current row position.
+            curr_col (int): Current column position.
+            rows (int): Total number of rows in the terminal.
+            cols (int): Total number of columns in the terminal.
+
+        Returns:
+            None
         """
         if not pass_pad:
             return
@@ -598,6 +708,15 @@ class CLIView:
             )
 
     def _post_input(self, height, width):
+        """Render the pad after user input is entered.
+
+        Args:
+            height (int): Number of rows in the terminal.
+            width (int): Number of columns in the terminal.
+
+        Returns:
+            None
+        """
         pad_to_render = None
         if self._view_params["status_type"] == "normal":
             pad_to_render = self._all_passes_pad
@@ -619,6 +738,14 @@ class CLIView:
         )
 
     def display(self, stdscr):
+        """Display the Qiskit Transpiler Debugger on the terminal.
+
+        Args:
+            stdscr (curses.window): The main window object provided by the curses library.
+
+        Returns:
+            None
+        """
         key = 0
 
         # Clear and refresh the screen for a blank canvas

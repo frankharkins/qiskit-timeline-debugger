@@ -6,6 +6,16 @@ from collections import defaultdict
 
 class TranspilerPassPad:
     def __init__(self, step, circuit, property_set, height, width, pad_obj):
+        """Pass Pad for the CLI Debugger
+
+        Args:
+            step (TranspilationStep): The transpilation step to be displayed
+            circuit (): Text circuit diagram
+            property_set (default dict): The property set to be displayed
+            height (int)): The height of the pad
+            width (int): The width of the pad
+            pad_obj (curses.Window): The curses pad object
+        """
         self.transpiler_pass = step
         self.circuit = circuit
         self.property_set = property_set
@@ -15,13 +25,31 @@ class TranspilerPassPad:
         self._start_row = 0
 
     def _get_center(self, width, string_len, divisor=2):
+        """Get the center of the pad
+
+        Args:
+            width (int): The width of the pad
+            string_len (int): The length of the string to be centered
+            divisor (int, optional): The divisor to be used. Defaults to 2.
+
+        """
         return max(0, int(width // divisor - string_len // 2 - string_len % 2))
 
     def _display_header(self, string):
+        """Display a header in the pad
+
+        Args:
+            string (str): The string to be displayed
+        """
         offset = self._get_center(self.width, len(string))
         self.pad.addstr(self._start_row, offset, string, curses.A_BOLD)
 
     def _add_title(self):
+        """Add the title of the pass to the pad
+
+        Args:
+            None
+        """
         pass_name = f"{self.transpiler_pass.index}. {self.transpiler_pass.name}"[
             : self.width - 1
         ]
@@ -36,14 +64,27 @@ class TranspilerPassPad:
         self.pad.hline(self._start_row, 0, "_", self.width - 4)
 
     def _add_information(self):
+        """Add the information of the pass to the pad
+
+        Args:
+            None
+        """
         self._start_row += 2
         pass_type = self.transpiler_pass.pass_type.value
         pass_runtime = self.transpiler_pass.duration
-        info_string = f"Type : {pass_type} | Runtime : {pass_runtime}"[: self.width - 1]
+        info_string = f"Type : {pass_type} | Runtime (ms) : {pass_runtime}"[
+            : self.width - 1
+        ]
 
         self._display_header(info_string)
 
     def _add_statistics(self):
+        """Add the statistics of the pass to the pad
+
+        Args:
+            None
+        """
+
         self._start_row += 2
 
         props_string = f"Depth : {self.transpiler_pass.circuit_stats.depth} | "
@@ -57,14 +98,19 @@ class TranspilerPassPad:
         self.pad.addstr(self._start_row, props_offset, props_string)
 
     def _get_property_data(self):
-        prop_data = []  # propname, value, state
+        """Get the property set data as a list of lists
+
+        Args:
+            None
+        """
+
+        prop_data = []
 
         # I need this to present in order to access the property set
         # items
 
-        # IMPORTANT POINTS
-
         for name, property_ in self.property_set.items():
+            changed_prop = True
             if property_.prop_type not in (int, float, bool, str):
                 txt = (
                     "(dict)"
@@ -74,11 +120,25 @@ class TranspilerPassPad:
             else:
                 txt = str(property_.value)
 
-            prop_data.append([name, txt, property_.state])
+            if not property_.state or len(property_.state) == 0:
+                changed_prop = False
+                property_.state = "---"
+
+            data_item = [name, txt, property_.state]
+            if changed_prop:
+                prop_data.insert(0, data_item)
+            else:
+                prop_data.append(data_item)
 
         return prop_data
 
     def _add_property_set(self):
+        """Add the property set to the pad
+
+        Args:
+            None
+        """
+
         self._start_row += 2
         self._display_header("Property Set"[: self.width - 1])
         self._start_row += 1
@@ -109,12 +169,19 @@ class TranspilerPassPad:
         self._start_row += len(prop_set_table)
 
     def _add_documentation(self):
+        """Add the documentation to the pad
+
+        Args:
+            None
+
+        """
+
         self._start_row += 2
         self._display_header("Documentation"[: self.width - 1])
         self._start_row += 1
         pass_docs = self.transpiler_pass.get_docs()
 
-        if pass_docs.count("\n") > 0:
+        if pass_docs and pass_docs.count("\n") > 0:
             pass_docs = "    " + pass_docs
         pass_docs = [[pass_docs], [self.transpiler_pass.run_method_docs]]
 
@@ -135,6 +202,11 @@ class TranspilerPassPad:
         self._start_row += len(docs_table)
 
     def _add_circuit(self):
+        """Add the circuit diagram to the pad
+
+        Args:
+            None
+        """
         self._start_row += 2
         self._display_header("Circuit Diagram"[: self.width - 1])
         self._start_row += 1
@@ -161,6 +233,11 @@ class TranspilerPassPad:
         self._start_row += len(circ_table)
 
     def _add_logs(self):
+        """Add the logs to the pad
+
+        Args:
+            None
+        """
         self._start_row += 2
         self._display_header("Logs"[: self.width - 1])
         self._start_row += 1
@@ -193,6 +270,8 @@ class TranspilerPassPad:
         self._start_row += len(log_table)
 
     def build_pad(self):
+        """Build the pad view"""
+
         self._add_title()
         self._add_information()
         self._add_statistics()
