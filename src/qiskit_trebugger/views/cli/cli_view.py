@@ -45,7 +45,7 @@ class CLIView:
             "index": " STATUS BAR  | Enter the index of the pass you want to view : ",
             "invalid": " STATUS BAR  | Invalid input entered. Press Enter to continue.",
             "out_of_bounds": " STATUS BAR  | Number entered is out of bounds. Please Enter to continue.",
-            "pass": " STATUS BAR  | Arrow keys: Scrolling | 'U/D': Page up/down | 'N/P': Move to next/previous | 'I': Index into a pass | 'B': Back to all passes | 'Q': Exit",
+            "pass": " STATUS BAR  | Arrow keys: Scrolling | 'U/D': Page up/down | 'N/P': Move to next/previous | 'I': Index into a pass | 'B': Back to home | 'Q': Exit",
         }
 
         self._colors = {
@@ -54,6 +54,7 @@ class CLIView:
             "base_pass_title": None,
             "changing_pass": None,
         }
+
         # define status object
         self._reset_view_params()
 
@@ -70,7 +71,7 @@ class CLIView:
             "last_height": 0,
             "pass_id": -1,
             "transpiler_pad_width": 500,
-            "transpiler_pad_height": 2000,
+            "transpiler_pad_height": 3000,
             "transpiler_start_row": 6,
             "transpiler_start_col": None,
             "status_type": "normal",
@@ -599,7 +600,7 @@ class CLIView:
             )
 
         # generate a changing pass set to see which pass
-        # changed the circuit and which didnt
+        # changed the circuit and which didn't
         changing_pass_list = set(self._get_changing_pass_list())
 
         def _is_changing_pass_row(row):

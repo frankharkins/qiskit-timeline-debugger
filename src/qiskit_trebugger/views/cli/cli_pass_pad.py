@@ -19,10 +19,13 @@ class TranspilerPassPad:
         self.transpiler_pass = step
         self.circuit = circuit
         self.property_set = property_set
+        self.log_data = []
         self.height = height
         self.width = width
         self.pad = pad_obj
         self._start_row = 0
+
+        self.view_params = {"logs": True, "circuit": True}
 
     def _get_center(self, width, string_len, divisor=2):
         """Get the center of the pad
@@ -117,6 +120,9 @@ class TranspilerPassPad:
                     if isinstance(property_.value, defaultdict)
                     else "(" + property_.prop_type.__name__ + ")"
                 )
+
+                # if property_.prop_type.__name__ == "Layout":
+                #     txt = property_.value.get_physical_bits()
             else:
                 txt = str(property_.value)
 
@@ -167,6 +173,42 @@ class TranspilerPassPad:
                 highlight,
             )
         self._start_row += len(prop_set_table)
+
+    def _add_original_qubits(self):
+        if "original_qubit_indices" not in self.property_set:
+            return
+
+        self._start_row += 2
+        self._display_header("Original Qubit Indices"[: self.width - 1])
+        self._start_row += 1
+
+        original_indices = self.property_set["original_qubit_indices"].value.items()
+        index_data = []
+        for qubit, index in original_indices:
+            index_data.append([qubit, index])
+
+        headers = ["Qubit", "Index"]
+
+        indices_table = tabulate.tabulate(
+            tabular_data=index_data,
+            headers=headers,
+            tablefmt="simple_grid",
+            stralign="center",
+            numalign="center",
+            showindex=False,
+        ).splitlines()
+
+        indices_offset = self._get_center(self.width, len(indices_table[0]))
+        for row in range(len(indices_table)):
+            # 0 is default
+            highlight = 0 if row > 2 else curses.A_BOLD
+            self.pad.addstr(
+                row + self._start_row,
+                indices_offset,
+                indices_table[row][: self.width - 1],
+                highlight,
+            )
+        self._start_row += len(indices_table)
 
     def _add_documentation(self):
         """Add the documentation to the pad
@@ -242,21 +284,20 @@ class TranspilerPassPad:
         self._display_header("Logs"[: self.width - 1])
         self._start_row += 1
 
-        log_data = []
-        for entry in self.transpiler_pass.logs:
-            log_string = (
-                f"{datetime.fromtimestamp(entry.time).strftime('%H:%M:%S.%f')[:-3]} | "
-            )
-            # to do : Add args in message
-            log_string += f"{entry.levelname} \n {entry.msg}" % entry.args
+        if not self.log_data:
+            self.log_data = []
+            for entry in self.transpiler_pass.logs:
+                log_string = f"{datetime.fromtimestamp(entry.time).strftime('%H:%M:%S.%f')[:-3]} | "
 
-            log_data.append([log_string])
+                log_string += f"{entry.levelname} \n {entry.msg}" % entry.args
 
-        if not log_data:
-            log_data = [["This pass does not display any Logs."]]
+                self.log_data.append([log_string])
+
+        if not self.log_data:
+            self.log_data = [["This pass does not display any Logs."]]
 
         log_table = tabulate.tabulate(
-            tabular_data=log_data,
+            tabular_data=self.log_data,
             tablefmt="simple_grid",
             stralign="left",
             numalign="center",
@@ -276,6 +317,7 @@ class TranspilerPassPad:
         self._add_information()
         self._add_statistics()
         self._add_property_set()
+        self._add_original_qubits()
         self._add_circuit()
-        self._add_logs()
         self._add_documentation()
+        self._add_logs()
