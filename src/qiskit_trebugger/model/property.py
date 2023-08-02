@@ -34,5 +34,4 @@ class Property:
             return False
         if self.value != other.value:
             return False
-
         return True

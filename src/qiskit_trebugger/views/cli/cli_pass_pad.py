@@ -25,8 +25,6 @@ class TranspilerPassPad:
         self.pad = pad_obj
         self._start_row = 0
 
-        self.view_params = {"logs": True, "circuit": True}
-
     def _get_center(self, width, string_len, divisor=2):
         """Get the center of the pad
 
@@ -108,21 +106,27 @@ class TranspilerPassPad:
         """
 
         prop_data = []
-
-        # I need this to present in order to access the property set
-        # items
+        vf2_properties = {
+            "VF2Layout_stop_reason",
+            "VF2PostLayout_stop_reason",
+        }
 
         for name, property_ in self.property_set.items():
             changed_prop = True
             if property_.prop_type not in (int, float, bool, str):
-                txt = (
-                    "(dict)"
-                    if isinstance(property_.value, defaultdict)
-                    else "(" + property_.prop_type.__name__ + ")"
-                )
+                if name in vf2_properties:
+                    txt = property_.value.name
+                elif name == "optimization_loop_minimum_point_state":
+                    txt = f"""score : {property_.value.score}, since : {property_.value.since}"""
+                elif name == "commutation_set":
+                    txt = "(dict)"
+                else:
+                    txt = (
+                        "(dict)"
+                        if isinstance(property_.value, defaultdict)
+                        else "(" + property_.prop_type.__name__ + ")"
+                    )
 
-                # if property_.prop_type.__name__ == "Layout":
-                #     txt = property_.value.get_physical_bits()
             else:
                 txt = str(property_.value)
 
@@ -183,6 +187,7 @@ class TranspilerPassPad:
         self._start_row += 1
 
         original_indices = self.property_set["original_qubit_indices"].value.items()
+
         index_data = []
         for qubit, index in original_indices:
             index_data.append([qubit, index])
@@ -210,12 +215,73 @@ class TranspilerPassPad:
             )
         self._start_row += len(indices_table)
 
+    def _add_layout(self, layout_type):
+        if "original_qubit_indices" not in self.property_set:
+            return
+
+        if layout_type not in self.property_set:
+            return
+
+        # total num of physical qubits
+        physical_qubits = len(self.property_set["original_qubit_indices"].value)
+        curr_layout = self.property_set[layout_type].value.get_physical_bits()
+
+        # original map of qubits to indices
+        original_indices = self.property_set["original_qubit_indices"].value
+
+        # add the layout to the pad
+        self._start_row += 2
+        self._display_header(f"{layout_type}"[: self.width - 1])
+        self._start_row += 1
+
+        elements_per_table = 15
+        # multiple tables required
+        num_tables = physical_qubits // elements_per_table
+        num_tables += 1 if physical_qubits % elements_per_table != 0 else 0
+
+        for i in range(num_tables):
+            data = []
+            start = i * elements_per_table
+            end = start + elements_per_table - 1
+
+            if start >= end:
+                break
+
+            data.append(f"Physical Qubits({start}-{min(physical_qubits-1,end)})")
+
+            for qubit in range(start, end + 1):
+                if qubit not in curr_layout:
+                    data.append("--")
+                    continue
+                virtual_qubit = curr_layout[qubit]
+                data.append(original_indices[virtual_qubit])
+
+            # draw this single row table now
+            data_table = tabulate.tabulate(
+                tabular_data=[data],
+                tablefmt="simple_grid",
+                stralign="center",
+                numalign="center",
+                showindex=False,
+            ).splitlines()
+
+            table_offset = self._get_center(self.width, len(data_table[0]))
+            for row in range(len(data_table)):
+                self.pad.addstr(
+                    row + self._start_row,
+                    table_offset,
+                    data_table[row][: self.width - 1],
+                    curses.A_BOLD,
+                )
+            self._start_row += len(data_table) + 1
+
+        self._start_row += 1
+
     def _add_documentation(self):
         """Add the documentation to the pad
 
         Args:
             None
-
         """
 
         self._start_row += 2
@@ -318,6 +384,8 @@ class TranspilerPassPad:
         self._add_statistics()
         self._add_property_set()
         self._add_original_qubits()
+        self._add_layout("layout")
+        # self._add_layout("final_layout")
         self._add_circuit()
         self._add_documentation()
         self._add_logs()

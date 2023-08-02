@@ -1,7 +1,6 @@
 import curses
 
 
-# To Do :
 class COLORS:
     TITLE = {"back": curses.COLOR_WHITE, "front": curses.COLOR_MAGENTA}
 

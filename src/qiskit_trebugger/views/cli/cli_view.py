@@ -70,8 +70,8 @@ class CLIView:
             "last_width": 0,
             "last_height": 0,
             "pass_id": -1,
-            "transpiler_pad_width": 500,
-            "transpiler_pad_height": 3000,
+            "transpiler_pad_width": 800,
+            "transpiler_pad_height": 5000,
             "transpiler_start_row": 6,
             "transpiler_start_col": None,
             "status_type": "normal",
@@ -618,20 +618,17 @@ class CLIView:
             offset = self._get_center(
                 table_width, len(self._all_passes_table[row][: table_width - 1])
             )
+            highlight = 0
 
             if _is_changing_pass_row(row):
-                pass_pad.addstr(
-                    row,
-                    start_x + offset,
-                    self._all_passes_table[row][: table_width - 1],
-                    curses.A_BOLD | self._colors["changing_pass"],
-                )
-            else:
-                pass_pad.addstr(
-                    row,
-                    start_x + offset,
-                    self._all_passes_table[row][: table_width - 1],
-                )
+                highlight = curses.A_BOLD | self._colors["changing_pass"]
+
+            pass_pad.addstr(
+                row,
+                start_x + offset,
+                self._all_passes_table[row][: table_width - 1],
+                highlight,
+            )
 
         # populated pad with passes
         return pass_pad
