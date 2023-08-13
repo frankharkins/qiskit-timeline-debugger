@@ -1,7 +1,8 @@
 import curses
-import tabulate
 from datetime import datetime
 from collections import defaultdict
+
+import tabulate
 
 
 class TranspilerPassPad:
@@ -167,13 +168,13 @@ class TranspilerPassPad:
         ).splitlines()
 
         props_offset = self._get_center(self.width, len(prop_set_table[0]))
-        for row in range(len(prop_set_table)):
+        for index, row in enumerate(prop_set_table):
             # 0 is default
-            highlight = 0 if row > 2 else curses.A_BOLD
+            highlight = 0 if index > 2 else curses.A_BOLD
             self.pad.addstr(
-                row + self._start_row,
+                index + self._start_row,
                 props_offset,
-                prop_set_table[row][: self.width - 1],
+                row[: self.width - 1],
                 highlight,
             )
         self._start_row += len(prop_set_table)
@@ -204,13 +205,13 @@ class TranspilerPassPad:
         ).splitlines()
 
         indices_offset = self._get_center(self.width, len(indices_table[0]))
-        for row in range(len(indices_table)):
+        for index, row in enumerate(indices_table):
             # 0 is default
-            highlight = 0 if row > 2 else curses.A_BOLD
+            highlight = 0 if index > 2 else curses.A_BOLD
             self.pad.addstr(
-                row + self._start_row,
+                index + self._start_row,
                 indices_offset,
-                indices_table[row][: self.width - 1],
+                row[: self.width - 1],
                 highlight,
             )
         self._start_row += len(indices_table)
@@ -266,7 +267,7 @@ class TranspilerPassPad:
             ).splitlines()
 
             table_offset = self._get_center(self.width, len(data_table[0]))
-            for row in range(len(data_table)):
+            for row, _ in enumerate(data_table):
                 self.pad.addstr(
                     row + self._start_row,
                     table_offset,
@@ -324,7 +325,7 @@ class TranspilerPassPad:
         else:
             circ_string = [
                 [
-                    f"Circuit with depth {self.transpiler_pass.circuit_stats.depth} too large to display"
+                    f"Circuit depth {self.transpiler_pass.circuit_stats.depth} too large to display"
                 ]
             ]
         circ_table = tabulate.tabulate(
@@ -335,8 +336,8 @@ class TranspilerPassPad:
         ).splitlines()
 
         circ_offset = self._get_center(self.width, len(circ_table[0]))
-        for row in range(len(circ_table)):
-            self.pad.addstr(row + self._start_row, circ_offset, circ_table[row])
+        for index, row in enumerate(circ_table):
+            self.pad.addstr(index + self._start_row, circ_offset, row)
 
         self._start_row += len(circ_table)
 
@@ -370,10 +371,8 @@ class TranspilerPassPad:
         ).splitlines()
 
         logs_offset = self._get_center(self.width, len(log_table[0]))
-        for row in range(len(log_table)):
-            self.pad.addstr(
-                row + self._start_row, logs_offset, log_table[row][: self.width - 1]
-            )
+        for index, row in enumerate(log_table):
+            self.pad.addstr(index + self._start_row, logs_offset, row[: self.width - 1])
         self._start_row += len(log_table)
 
     def build_pad(self):

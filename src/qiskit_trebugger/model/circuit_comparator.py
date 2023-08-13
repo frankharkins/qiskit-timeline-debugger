@@ -82,7 +82,6 @@ class CircuitComparator:
 
         while i > 0 and j > 0:
             if moments1[i - 1] == moments2[j - 1]:
-
                 # just want diff for second one
                 id_set.add(j - 1)
                 i -= 1

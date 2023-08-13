@@ -722,6 +722,11 @@ class TimelineView(widgets.VBox):
             img_wpr.append_display_data(HTML(img_html))
 
     def on_property(self, btn):
+        """Callback to handle the toggling of properties in the debugger
+
+        Args:
+            btn (ButtonWithValue): Button associated with the callbacks
+        """
         warnings.filterwarnings(
             "ignore",
             message="Back-references to from Bit instances to \

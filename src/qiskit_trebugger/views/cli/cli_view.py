@@ -528,6 +528,11 @@ class CLIView:
         self._pass_pad_list[index] = pass_pad.pad
 
     def add_step(self, step):
+        """Adds a step to the transpilation sequence.
+
+        Args:
+            step (TranspilationStep): `TranspilationStep` object to be added to the transpilation sequence.
+        """
         self._all_passes_data.append(
             [
                 step.name,
@@ -607,11 +612,10 @@ class CLIView:
             # dashes only at even rows
             if row % 2 == 0:
                 return False
-            else:
-                index = (row - header_height) // 2
-                if index in changing_pass_list:
-                    return True
-                return False
+            index = (row - header_height) // 2
+            if index in changing_pass_list:
+                return True
+            return False
 
         # now start adding the passes
         for row in range(header_height, len(self._all_passes_table)):
