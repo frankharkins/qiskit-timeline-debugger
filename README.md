@@ -110,7 +110,8 @@ debugger.debug(circuit, optimization_level = 2, backend = backend, initial_layou
 <img src = "imgs/cli/indexed-1.png" width = "90%"> 
 <img src = "imgs/cli/indexed-2.png" width = "90%">
 
-
+## Docs
+We use the `pydoc` module to generate [project documentation](https://thegupta2012.github.io/qiskit-timeline-debugger/qiskit_trebugger.html)
 
 ## Demonstration and Blog
 - Here is a [demonstration of TreBugger](https://drive.google.com/file/d/1oRstcov-OQWDpsM7Q53x7BfgFC-edtkT/view?usp=sharing) as a part of the final showcase for the Qiskit Advocate Mentorship Program, Fall 2021.
