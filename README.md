@@ -3,11 +3,11 @@
 [![Unitary Fund](https://img.shields.io/badge/Supported%20By-UNITARY%20FUND-brightgreen.svg?style=for-the-badge)](http://unitary.fund)
 
 A new take on debuggers for quantum transpilers. 
-This repository presents a debugger for the **qiskit transpiler** in the form of a light weight jupyter widget. Built as a project for the Qiskit Advocate Mentorship Program, Fall 2021. 
+This repository presents a debugger for the **qiskit transpiler** in the form of a lightweight jupyter widget. Built as a project for the Qiskit Advocate Mentorship Program, Fall 2021. 
 
 
 ## Installation
-1. To install the debugger using pip (a python package manager), use - 
+1. To install the debugger using pip (a Python package manager), use - 
 
 ```bash
 pip install qiskit-trebugger
@@ -18,7 +18,7 @@ PIP will handle the dependencies required for the package automatically and woul
  ```bash
  git clone https://github.com/TheGupta2012/qiskit-timeline-debugger.git
  ```
-  - Make sure `python3` and `pip` are installed in your system. It is recommended to use a python virtual environment to install and develop the debugger
+  - Make sure `python3` and `pip` are installed in your system. It is recommended to use a Python virtual environment to install and develop the debugger
   - `cd` into the `qiskit-timeline-debugger` directory
   - Use `pip install -r requirements.txt` to install the project dependencies
   - Next, execute `pip install .` command to install the debugger
@@ -30,7 +30,7 @@ PIP will handle the dependencies required for the package automatically and woul
 - The debugger provides two types of views namely *jupyter* and *cli*
 - The **cli** view is the default view and recommender for users who want to use the debugger in a terminal environment 
 - The **jupyter** view is recommended for usage in a jupyter notebook and provides a more interactive and detailed view of the transpilation process.
-- For an example - 
+- For example - 
 
 ```python
 from qiskit.providers.fake_provider import FakeCasablanca
@@ -46,7 +46,7 @@ circuit = random_circuit(num_qubits = 4, depth = 5 , seed = 44)
 debugger.debug(circuit, optimization_level = 2, backend = backend, initial_layout = list(range(4)))
 ``` 
 - On calling the debug method, a new jupyter widget is displayed providing a complete summary and details of the transpilation process for circuits of < 2000 depth
-- With an easy to use and responsive interface, users can quickly see which transpiler passes ran when, how they changed the quantum circuit and what exactly changed.
+- With an easy-to-use and responsive interface, users can quickly see which transpiler passes ran when, how they changed the quantum circuit, and what exactly changed.
 
 
 ## Feature Highlights
@@ -105,7 +105,7 @@ debugger.debug(circuit, optimization_level = 2, backend = backend, initial_layou
 #### 3. Transpiler Logs and Property sets
 
 - Emits transpiler logs associated with each of the transpiler passes.
-- Highlights addition to property set and its changes during the transpilation process.
+- Highlights addition to the property set and its changes during the transpilation process.
 
 <img src = "imgs/cli/indexed-1.png" width = "90%"> 
 <img src = "imgs/cli/indexed-2.png" width = "90%">
@@ -114,7 +114,7 @@ debugger.debug(circuit, optimization_level = 2, backend = backend, initial_layou
 
 ## Demonstration and Blog
 - Here is a [demonstration of TreBugger](https://drive.google.com/file/d/1oRstcov-OQWDpsM7Q53x7BfgFC-edtkT/view?usp=sharing) as a part of the final showcase for the Qiskit Advocate Mentorship Program, Fall 2021.
-- You can also read about some more details of our project in the [Qiskit medium blog](https://medium.com/qiskit/qiskit-trebugger-f7242066d368)
+- You can also read some more details of our project in the [Qiskit medium blog](https://medium.com/qiskit/qiskit-trebugger-f7242066d368)
 
 ## Contributors 
 - [Aboulkhair Foda](https://github.com/EgrettaThula)
