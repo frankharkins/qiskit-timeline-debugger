@@ -1,3 +1,6 @@
+"""A module for the CLI view for the Qiskit Transpiler Debugger.
+"""
+
 import curses
 from curses.textpad import Textbox
 
@@ -251,9 +254,12 @@ class CLIView:
         init_step_dict = init_step.circuit_stats.__dict__
         final_step_dict = final_step.circuit_stats.__dict__
 
-        for prop in overview_stats:  # prop should have same name as in CircuitStats
-            overview_stats[prop]["init"] = init_step_dict[prop]
-            overview_stats[prop]["final"] = final_step_dict[prop]
+        for (
+            prop,
+            value,
+        ) in overview_stats.items():  # prop should have same name as in CircuitStats
+            value["init"] = init_step_dict[prop]
+            value["final"] = final_step_dict[prop]
 
         # get the op counts
         overview_stats["ops"] = {"init": 0, "final": 0}
@@ -468,7 +474,7 @@ class CLIView:
             try:
                 self._overview = self._build_overview_win(height, width)
                 self._overview.noutrefresh()
-            except:
+            except Exception as _:
                 # change the view param for overview
                 self._view_params["transpiler_start_col"] = 0
 
@@ -497,7 +503,7 @@ class CLIView:
                     == PassType.TRANSFORMATION
                 )
 
-        if found_transform is False:
+        if not found_transform:
             return self.transpilation_sequence.original_circuit
 
         return dag_to_circuit(self.transpilation_sequence.steps[idx].dag)

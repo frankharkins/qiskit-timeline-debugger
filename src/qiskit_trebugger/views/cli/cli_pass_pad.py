@@ -1,3 +1,6 @@
+"""The Transpiler Pass Pad for the CLI Debugger
+"""
+
 import curses
 from datetime import datetime
 from collections import defaultdict
@@ -6,6 +9,8 @@ import tabulate
 
 
 class TranspilerPassPad:
+    """The Transpiler Pass Pad"""
+
     def __init__(self, step, circuit, property_set, height, width, pad_obj):
         """Pass Pad for the CLI Debugger
 
@@ -88,12 +93,10 @@ class TranspilerPassPad:
         """
 
         self._start_row += 2
-
-        props_string = f"Depth : {self.transpiler_pass.circuit_stats.depth} | "
-        props_string += f"Width : {self.transpiler_pass.circuit_stats.width} | "
-        props_string += f"Size : {self.transpiler_pass.circuit_stats.size} | "
-        props_string += f"1Q Ops : {self.transpiler_pass.circuit_stats.ops_1q} | "
-        props_string += f"2Q Ops : {self.transpiler_pass.circuit_stats.ops_2q}"
+        stats = self.transpiler_pass.circuit_stats
+        props_string = f"Depth : {stats.depth} | Width : {stats.width} | Size : {stats.size} | 1Q Ops : {stats.ops_1q} | 2Q Ops : {stats.ops_2q}"[
+            : self.width - 1
+        ]
 
         props_string = props_string[: self.width - 1]
         props_offset = self._get_center(self.width, len(props_string))
@@ -120,7 +123,7 @@ class TranspilerPassPad:
                 elif name == "optimization_loop_minimum_point_state":
                     txt = f"""score : {property_.value.score}, since : {property_.value.since}"""
                 elif name == "commutation_set":
-                    txt = "(dict)"
+                    txt = f"(dict)"
                 else:
                     txt = (
                         "(dict)"
@@ -180,6 +183,7 @@ class TranspilerPassPad:
         self._start_row += len(prop_set_table)
 
     def _add_original_qubits(self):
+        """Add information about original qubit indices to the pad."""
         if "original_qubit_indices" not in self.property_set:
             return
 
@@ -217,10 +221,15 @@ class TranspilerPassPad:
         self._start_row += len(indices_table)
 
     def _add_layout(self, layout_type):
-        if "original_qubit_indices" not in self.property_set:
-            return
+        """Add layout information to the pad.
 
-        if layout_type not in self.property_set:
+        Args:
+            layout_type (str): The type of layout to be added.
+        """
+        if (
+            "original_qubit_indices" not in self.property_set
+            or layout_type not in self.property_set
+        ):
             return
 
         # total num of physical qubits
@@ -241,14 +250,13 @@ class TranspilerPassPad:
         num_tables += 1 if physical_qubits % elements_per_table != 0 else 0
 
         for i in range(num_tables):
-            data = []
             start = i * elements_per_table
             end = start + elements_per_table - 1
 
             if start >= end:
                 break
 
-            data.append(f"Physical Qubits({start}-{min(physical_qubits-1,end)})")
+            data = [f"Physical Qubits({start}-{min(physical_qubits-1,end)})"]
 
             for qubit in range(start, end + 1):
                 if qubit not in curr_layout:
@@ -278,6 +286,51 @@ class TranspilerPassPad:
 
         self._start_row += 1
 
+    def _add_commutation_set(self):
+        """Add commutation set information to the pad."""
+        if "commutation_set" not in self.property_set:
+            return
+
+        # add the layout to the pad
+        self._start_row += 2
+        self._display_header(f"Commutation Set"[: self.width - 1])
+        self._start_row += 1
+
+        comm_set = self.property_set["commutation_set"].value
+        comm_data_1, comm_data_2 = [], []
+        for key, value in comm_set.items():
+            if not isinstance(key, tuple):
+                comm_data_1.append([key, value])
+            else:
+                comm_data_2.append([key, value])
+
+        def _display_comm_table(data, header):
+            if len(data) == 0:
+                data = [[]]
+            comm_table = tabulate.tabulate(
+                tabular_data=data,
+                headers=header,
+                tablefmt="simple_grid",
+                stralign="center",
+                numalign="center",
+                showindex=False,
+                maxcolwidths=50,
+            ).splitlines()
+
+            table_offset = self._get_center(self.width, len(comm_table[0]))
+            for row, _ in enumerate(comm_table):
+                self.pad.addstr(
+                    row + self._start_row,
+                    table_offset,
+                    comm_table[row][: self.width - 1],
+                )
+            self._start_row += len(comm_table) + 2
+
+        header_1 = ["Bit", "Node List"]
+        header_2 = ["Node Tuple", "Set Index"]
+        _display_comm_table(comm_data_1, header_1)
+        _display_comm_table(comm_data_2, header_2)
+
     def _add_documentation(self):
         """Add the documentation to the pad
 
@@ -290,8 +343,9 @@ class TranspilerPassPad:
         self._start_row += 1
         pass_docs = self.transpiler_pass.get_docs()
 
-        if pass_docs and pass_docs.count("\n") > 0:
-            pass_docs = "    " + pass_docs
+        pass_docs = (
+            "    " + pass_docs if pass_docs and pass_docs.count("\n") > 0 else ""
+        )
         pass_docs = [[pass_docs], [self.transpiler_pass.run_method_docs]]
 
         docs_table = tabulate.tabulate(
@@ -302,11 +356,11 @@ class TranspilerPassPad:
 
         docs_offset = self._get_center(self.width, len(docs_table[0]))
 
-        for row in range(len(docs_table)):
+        for idx, row in enumerate(docs_table):
             self.pad.addstr(
-                row + self._start_row,
+                idx + self._start_row,
                 docs_offset,
-                docs_table[row][: self.width - 1],
+                row[: self.width - 1],
             )
         self._start_row += len(docs_table)
 
@@ -359,6 +413,9 @@ class TranspilerPassPad:
                 log_string += f"{entry.levelname} \n {entry.msg}" % entry.args
 
                 self.log_data.append([log_string])
+                if len(self.log_data) > 100:
+                    self.log_data.append(["..."])
+                    break
 
         if not self.log_data:
             self.log_data = [["This pass does not display any Logs."]]
@@ -384,7 +441,7 @@ class TranspilerPassPad:
         self._add_property_set()
         self._add_original_qubits()
         self._add_layout("layout")
-        # self._add_layout("final_layout")
+        self._add_commutation_set()
         self._add_circuit()
         self._add_documentation()
         self._add_logs()
