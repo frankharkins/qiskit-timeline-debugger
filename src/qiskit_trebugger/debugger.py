@@ -96,8 +96,6 @@ class Debugger:
 
         transpilation_sequence.original_circuit = circuit
 
-        warnings.simplefilter("default")
-
         Debugger.register_logging_handler(transpilation_sequence)
         transpiler_callback = Debugger._get_data_collector(transpilation_sequence)
 
@@ -109,7 +107,7 @@ class Debugger:
             if show:
                 display(cls.view)
 
-        transpile(
+        final_circ = transpile(
             circuit,
             backend,
             optimization_level=optimization_level,
@@ -119,6 +117,8 @@ class Debugger:
 
         if view_type == "jupyter":
             cls.view.update_summary()
+            cls.view.update_routing(final_circ, backend)
+            cls.view.update_timeline(final_circ, kwargs.get("scheduling_method", None))
             cls.view.add_class("done")
         elif view_type == "cli":
             curses.wrapper(cls.view.display)

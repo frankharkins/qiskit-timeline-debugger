@@ -8,7 +8,6 @@ class TranspilationSequence:
     def __init__(self, on_step_callback) -> None:
         self._original_circuit = None
         self._general_info = {}
-
         self.on_step_callback = on_step_callback
         self.steps = []
         self.total_runtime = 0

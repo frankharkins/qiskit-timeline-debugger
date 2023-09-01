@@ -12,9 +12,15 @@ import ipywidgets as widgets
 from qiskit.converters import dag_to_circuit, circuit_to_dag
 from qiskit.dagcircuit import DAGCircuit
 
-
 from .button_with_value import ButtonWithValue
-from .timeline_utils import view_circuit, get_spinner_html, get_styles, get_args_panel
+from .timeline_utils import (
+    view_circuit,
+    view_routing,
+    view_timeline,
+    get_spinner_html,
+    get_styles,
+    get_args_panel,
+)
 from ...model.pass_type import PassType
 from ...model.circuit_stats import CircuitStats
 from ...model.circuit_comparator import CircuitComparator
@@ -52,8 +58,8 @@ class TimelineView(widgets.VBox):
         general_info_panel.add_class("options")
         # summary panel
         summary_heading = widgets.HTML(
-            "<h2 style = 'margin: 10px 20px 0 30px; \
-                font-weight: bold;'> Transpilation overview</h2>"
+            "<h3 style = 'margin: 10px 20px 0 30px; \
+                font-weight: bold;'> Transpilation overview</h3>"
         )
         summary_panel = widgets.VBox(
             [
@@ -64,6 +70,48 @@ class TimelineView(widgets.VBox):
                         "width": "100%",
                         "padding": "5px",
                         "grid_template_columns": "repeat(2, 50%)",
+                    },
+                ),
+            ],
+            layout={"width": "100%"},
+        )
+
+        # routing panel
+        routing_heading = widgets.HTML(
+            "<h3 style = 'margin: 10px 20px 0 30px; \
+                font-weight: bold;'> Routing Overview</h3>"
+        )
+
+        routing_panel = widgets.VBox(
+            [
+                routing_heading,
+                widgets.GridBox(
+                    [],
+                    layout={
+                        "width": "100%",
+                        "padding": "5px",
+                        "grid_template_columns": "repeat(2, 50%)",
+                    },
+                ),
+            ],
+            layout={
+                "width": "100%",
+            },
+        )
+
+        # timeline panel
+        timeline_sched_heading = widgets.HTML(
+            "<h3 style = 'margin: 10px 20px 0 30px; \
+                font-weight: bold;'> Timeline Drawer</h3>"
+        )
+        timeline_sched_panel = widgets.VBox(
+            [
+                timeline_sched_heading,
+                widgets.VBox(
+                    [],
+                    layout={
+                        "width": "100%",
+                        "padding": "5px",
                     },
                 ),
             ],
@@ -133,6 +181,8 @@ class TimelineView(widgets.VBox):
             general_info_panel,
             params_panel,
             summary_panel,
+            routing_panel,
+            timeline_sched_panel,
             pass_panel,
         )
         self.layout = {"width": "100%"}
@@ -141,6 +191,8 @@ class TimelineView(widgets.VBox):
         self.panels = {
             "general_info": general_info_panel,
             "summary": summary_panel,
+            "routing": routing_panel,
+            "timeline": timeline_sched_panel,
             "params": params_panel,
             "pass": pass_panel,
         }
@@ -265,6 +317,75 @@ class TimelineView(widgets.VBox):
         ]
 
         return overview_children
+
+    def update_routing(self, circ, backend):
+        """Update the routing information after the transpilation"""
+        self.panels["routing"].children[1].add_class("routing-panel")
+        self.panels["routing"].children[1].children = self._get_routing_panel(
+            circ, backend
+        )
+
+    def _get_routing_panel(self, final_circuit, backend):
+        # get two views of the routing
+
+        virtual_head = widgets.HTML(
+            r"""<p class = 'label-purple-back'>
+                 Virtual Mapping  </p>
+                """
+        )
+        physical_head = widgets.HTML(
+            r"""<p class = 'label-purple-back'>
+                Physical Mapping  </p>
+            """
+        )
+        layout = {
+            "width": "100%",
+            "height": "100%",
+            "margin": "0 0 0 1%",
+            "padding": "5px 0px 2px 15px",
+        }
+        virtual_routing = widgets.Output(layout=layout)
+        virtual_routing.append_display_data(
+            HTML(view_routing(final_circuit, backend, "virtual"))
+        )
+        physical_routing = widgets.Output(layout=layout)
+        physical_routing.append_display_data(
+            HTML(view_routing(final_circuit, backend, "physical"))
+        )
+
+        return [
+            virtual_head,
+            physical_head,
+            virtual_routing,
+            physical_routing,
+        ]
+
+    def update_timeline(self, circ, schedule_type):
+        """Update the timeline drawer information after the transpilation"""
+        self.panels["timeline"].children[1].add_class("timeline-panel")
+        self.panels["timeline"].children[1].children = self._get_timeline_panel(
+            circ, schedule_type
+        )
+
+    def _get_timeline_panel(self, final_circuit, schedule_type):
+        layout = {
+            "width": "100%",
+            "height": "100%",
+            "margin": "0 0 0 1%",
+            "padding": "5px 0px 2px 15px",
+        }
+        timeline_widget = widgets.Output()
+        if schedule_type is None:
+            timeline_widget.append_display_data(
+                HTML(
+                    "<p class='label-text-2'> No scheduling method was set </p>",
+                )
+            )
+        else:
+            timeline_widget.layout = layout
+            timeline_widget.append_display_data(HTML(view_timeline(final_circuit)))
+
+        return [timeline_widget]
 
     def _add_args(self, btn):
         # here, if the button has been clicked
@@ -468,13 +589,6 @@ class TimelineView(widgets.VBox):
             details_panel.children = (tab,)
             dag = self._get_step_dag(step)
 
-            # this is for the default one
-            # when a tab is clicked, we would need to show something right
-
-            # vars : tab, dag, index that's it
-            # img_thread = Thread(target=self._load_img_view, args=[dag, tab, step_index])
-
-            # img_thread.start()
             self._load_img_view(dag, tab, step_index)
 
             tab.observe(self.on_tab_clicked)
@@ -696,9 +810,6 @@ class TimelineView(widgets.VBox):
                     self.transpilation_sequence.steps[step_index]
                 )
                 curr_circ = dag_to_circuit(curr_dag)
-
-                # okay so this is basically the circuit diff class
-
                 fully_changed, disp_circ = CircuitComparator.compare(
                     prev_circ, curr_circ
                 )

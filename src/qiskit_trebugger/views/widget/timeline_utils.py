@@ -2,8 +2,10 @@
 """
 from io import BytesIO
 from binascii import b2a_base64
-from qiskit.circuit import qpy_serialization
+from qiskit import qpy as qpy_serialization
 import ipywidgets as widgets
+from qiskit.visualization import plot_circuit_layout
+from qiskit.visualization import timeline_drawer
 
 
 def get_args_panel(**kwargs):
@@ -61,6 +63,29 @@ def get_args_panel(**kwargs):
 
     # construct final HBox
     return widgets.HBox(args_boxes, layout=dict(margin="10px 0 0 15px"))
+
+
+def _get_img_html(fig):
+    img_bio = BytesIO()
+    fig.savefig(img_bio, format="png", bbox_inches="tight")
+    fig.clf()
+    img_data = b2a_base64(img_bio.getvalue()).decode()
+    img_html = f"""
+        <div class="circuit-plot-wpr">
+            <img src="data:image/png;base64,{img_data}&#10;">
+        </div>
+        """
+    return img_html
+
+
+def view_routing(circuit, backend, route_type):
+    fig = plot_circuit_layout(circuit, backend, route_type)
+    return _get_img_html(fig)
+
+
+def view_timeline(circuit):
+    fig = timeline_drawer(circuit)
+    return _get_img_html(fig)
 
 
 def view_circuit(disp_circuit, suffix):
@@ -305,6 +330,10 @@ def get_styles():
 
         .label-text{
             padding: 2px 2px 2px 2px; margin-left:10%; font-size: 1.1em;
+        }
+        
+        .label-text-2{
+            padding: 2px 2px 2px 2px; margin-left:2%; font-size: 1.1em;
         }
 
         .label-purple-back{
